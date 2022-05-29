@@ -1,0 +1,6 @@
+[default]
+dependencies = [
+    "rust/Cargo.toml",
+    "rust/Cargo.lock",
+]
+

@@ -1,0 +1,4 @@
+[default]
+dependencies = [
+    "rust/sver/testdata/cyclic1"
+]

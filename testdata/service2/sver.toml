@@ -1,0 +1,8 @@
+[default]
+dependencies = [
+    "rust/sver/testdata/service1",
+    "rust/sver/testdata/lib1"
+]
+excludes = [
+    "doc",
+]
