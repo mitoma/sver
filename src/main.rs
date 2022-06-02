@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use log::debug;
 use serde::Serialize;
 use sver::{calc_version, Version};
@@ -8,25 +8,41 @@ use sver::{calc_version, Version};
 fn main() {
     env_logger::init();
     let args = Args::parse();
-    std::process::exit(match run(args) {
-        Ok(_) => 0,
-        Err(e) => {
-            println!("{}", e);
-            1
-        }
-    })
+
+    match args.command {
+        Commands::Calc {
+            paths,
+            output,
+            length,
+        } => std::process::exit(match calc(paths, output, length) {
+            Ok(_) => 0,
+            Err(e) => {
+                println!("{}", e);
+                1
+            }
+        }),
+    }
 }
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about = "version calucurator for git repository", long_about = None)]
 struct Args {
-    /// sver paths
-    paths: Vec<String>,
+    #[clap(subcommand)]
+    command: Commands,
+}
 
-    #[clap(arg_enum, short, long, default_value = "version-only")]
-    output: OutputFormat,
-    #[clap(arg_enum, short, long, default_value = "short")]
-    length: VersionLength,
+#[derive(Subcommand, Debug)]
+enum Commands {
+    /// calc version
+    Calc {
+        /// target paths
+        paths: Vec<String>,
+
+        #[clap(arg_enum, short, long, default_value = "version-only")]
+        output: OutputFormat,
+        #[clap(arg_enum, short, long, default_value = "short")]
+        length: VersionLength,
+    },
 }
 
 #[derive(Debug, Clone, clap::ArgEnum)]
@@ -62,18 +78,22 @@ struct VersionFullOutput {
     long_version: String,
 }
 
-fn run(args: Args) -> Result<(), Box<dyn Error>> {
-    let paths = if args.paths.is_empty() {
+fn calc(
+    paths: Vec<String>,
+    output: OutputFormat,
+    length: VersionLength,
+) -> Result<(), Box<dyn Error>> {
+    let paths = if paths.is_empty() {
         vec![".".to_string()]
     } else {
-        args.paths
+        paths
     };
     debug!("paths:{:?}", paths);
     let versions = paths
         .iter()
         .map(|p| crate::calc_version(p))
         .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
-    print_versions(&versions, args.output, args.length)?;
+    print_versions(&versions, output, length)?;
     Ok(())
 }
 
