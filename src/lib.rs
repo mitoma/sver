@@ -9,7 +9,34 @@ use log::debug;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    let (repo, _work_dir, target_path) = resolve_target_repo_and_path(path)?;
+
+    let entries = list_sorted_entries(&repo, &target_path)?;
+    let result: Vec<String> = entries
+        .iter()
+        .map(|(path, _oid)| String::from_utf8(path.clone()).unwrap())
+        .collect();
+    Ok(result)
+}
+
 pub fn calc_version(path: &str) -> Result<Version, Box<dyn Error>> {
+    let (repo, work_dir, target_path) = resolve_target_repo_and_path(path)?;
+
+    let entries = list_sorted_entries(&repo, &target_path)?;
+    let version = calc_hash_string(&repo, target_path.as_bytes(), &entries)?;
+
+    let version = Version {
+        repository_root: work_dir,
+        path: target_path,
+        version,
+    };
+    Ok(version)
+}
+
+fn resolve_target_repo_and_path(
+    path: &str,
+) -> Result<(Repository, String, String), Box<dyn Error>> {
     let target_path = Path::new(path);
     let repo = find_repository(target_path)?;
     let target_path = relative_path(&repo, target_path)?;
@@ -21,19 +48,11 @@ pub fn calc_version(path: &str) -> Result<Version, Box<dyn Error>> {
     let work_dir = repo
         .workdir()
         .and_then(|p| p.to_str())
-        .ok_or("bare repository")?;
+        .ok_or("bare repository")?
+        .to_string();
     debug!("repository_root:{}", work_dir);
     debug!("target_path:{}", target_path);
-
-    let entries = list_sorted_entries(&repo, &target_path)?;
-    let version = calc_hash_string(&repo, target_path.as_bytes(), &entries)?;
-
-    let version = Version {
-        repository_root: work_dir.to_string(),
-        path: target_path,
-        version,
-    };
-    Ok(version)
+    Ok((repo, work_dir, target_path))
 }
 
 pub struct Version {

@@ -3,24 +3,26 @@ use std::error::Error;
 use clap::{Parser, Subcommand};
 use log::debug;
 use serde::Serialize;
-use sver::{calc_version, Version};
+use sver::{calc_version, list_sources, Version};
 
 fn main() {
     env_logger::init();
     let args = Args::parse();
 
-    match args.command {
+    let result = match args.command {
         Commands::Calc {
             paths,
             output,
             length,
-        } => std::process::exit(match calc(paths, output, length) {
-            Ok(_) => 0,
-            Err(e) => {
-                println!("{}", e);
-                1
-            }
-        }),
+        } => calc(paths, output, length),
+        Commands::List { path } => list(path),
+    };
+    match result {
+        Ok(_) => std::process::exit(0),
+        Err(e) => {
+            println!("{}", e);
+            std::process::exit(1)
+        }
     }
 }
 
@@ -42,6 +44,11 @@ enum Commands {
         output: OutputFormat,
         #[clap(arg_enum, short, long, default_value = "short")]
         length: VersionLength,
+    },
+    List {
+        /// target path
+        #[clap(default_value = ".")]
+        path: String,
     },
 }
 
@@ -94,6 +101,11 @@ fn calc(
         .map(|p| crate::calc_version(p))
         .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
     print_versions(&versions, output, length)?;
+    Ok(())
+}
+
+fn list(path: String) -> Result<(), Box<dyn Error>> {
+    list_sources(&path)?.iter().for_each(|s| println!("{}", s));
     Ok(())
 }
 
