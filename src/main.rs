@@ -1,11 +1,11 @@
-use std::error::Error;
+use std::{error::Error, process::ExitCode};
 
 use clap::{Parser, Subcommand};
 use log::debug;
 use serde::Serialize;
 use sver::{calc_version, list_sources, Version};
 
-fn main() {
+fn main() -> ExitCode {
     env_logger::init();
     let args = Args::parse();
 
@@ -18,10 +18,10 @@ fn main() {
         Commands::List { path } => list(path),
     };
     match result {
-        Ok(_) => std::process::exit(0),
+        Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
             println!("{}", e);
-            std::process::exit(1)
+            ExitCode::FAILURE
         }
     }
 }
