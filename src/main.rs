@@ -45,6 +45,7 @@ enum Commands {
         #[clap(arg_enum, short, long, default_value = "short")]
         length: VersionLength,
     },
+    /// list package dependencies
     List {
         /// target path
         #[clap(default_value = ".")]
