@@ -42,13 +42,22 @@ jobs:
           ~/.cargo/git
           target
 
+    - name: Check ci-result
+      id: ci-result
+      run: |
+        echo "##[set-output name=build;]$(test -f ci-result/build-${{ steps.calc_version.outputs.version }}.success)"
+        echo "##[set-output name=lint;]$(test -f ci-result/lint-${{ steps.calc_version.outputs.version }}.success)"
+        echo "##[set-output name=test;]$(test -f ci-result/test-${{ steps.calc_version.outputs.version }}.success)"
+
     # ci phase
     - name: Build
-      if: ${{ hashFiles('ci-result/build-${{ steps.calc_version.outputs.version }}.success') == '' }}
+      if: ${{ ${{ steps.ci-result.outputs.build }}.success') != 0 }}
       run: cargo build --verbose && touch ci-result/build-${{ steps.calc_version.outputs.version }}.success
     - name: Lint
+      if: ${{ ${{ steps.ci-result.outputs.lint }}.success') != 0 }}
       run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
     - name: Run tests
+      if: ${{ ${{ steps.ci-result.outputs.test }}.success') != 0 }}
       run: cargo test --verbose && touch ci-result/test-${{ steps.calc_version.outputs.version }}.success
 
     # omake
