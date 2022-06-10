@@ -26,13 +26,13 @@ jobs:
       run: mkdir ci-result
     - name: Cache ci result
       uses: actions/cache@v3
-      key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
       with:
+        key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
         path: ci-result
     - name: Cache cargo dependency
       uses: actions/cache@v3
-      key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       with:
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         path: |
           ~/.cargo/registry
           ~/.cargo/git
