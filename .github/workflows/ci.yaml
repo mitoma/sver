@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - uses: actions/checkout@v3
+
+    # setup and calc version
     - name: install sver
       run: |
         wget https://github.com/mitoma/sver/releases/download/v0.1.0/sver_linux_amd64.zip
@@ -16,12 +19,13 @@ jobs:
         mv sver_linux_amd64/sver /usr/local/bin
         rm -rf sver_linux_amd64.zip sver_linux_amd64
         sver --help
-    - uses: actions/checkout@v3
     - id: calc_version
       name: calc current version
       run: |
         version="$(sver calc .)"
         echo "##[set-output name=version;]${version}"
+
+    # setup cache
     - name: Create ci-result dir
       run: mkdir ci-result
     - name: Cache ci result
@@ -37,6 +41,8 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
+
+    # ci phase
     - name: Build
       if: ${{ hashFiles('ci-result/build-${{ steps.calc_version.outputs.version }}.success') == '' }}
       run: cargo build --verbose && touch ci-result/build-${{ steps.calc_version.outputs.version }}.success
@@ -44,5 +50,7 @@ jobs:
       run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
     - name: Run tests
       run: cargo test --verbose && touch ci-result/test-${{ steps.calc_version.outputs.version }}.success
+
+    # omake
     - name: Print version
       run: echo "version=${{ steps.calc_version.outputs.version }}"
