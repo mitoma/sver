@@ -34,6 +34,6 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: ci-result
-        path: ci-result
+        path: ci-result/*
     - name: Print version
       run: echo "version=${{ steps.calc_version.outputs.version }}"
