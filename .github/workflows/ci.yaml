@@ -24,16 +24,25 @@ jobs:
         echo "##[set-output name=version;]${version}"
     - name: Create ci-result dir
       run: mkdir ci-result
+    - name: Cache ci result
+      uses: actions/cache@v3
+      key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
+      with:
+        path: ci-result
+    - name: Cache cargo dependency
+      uses: actions/cache@v3
+      key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
     - name: Build
+      if: ${{ hashFiles('ci-result/build-${{ steps.calc_version.outputs.version }}.success') == '' }}
       run: cargo build --verbose && touch ci-result/build-${{ steps.calc_version.outputs.version }}.success
     - name: Lint
       run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
     - name: Run tests
       run: cargo test --verbose && touch ci-result/test-${{ steps.calc_version.outputs.version }}.success
-    - name: upload ci-result artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: ci-result
-        path: ci-result/*
     - name: Print version
       run: echo "version=${{ steps.calc_version.outputs.version }}"
