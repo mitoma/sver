@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: setup sver
+      run: |
+        echo $PATH | sed -e 's/:/\n/g'
+        wget https://github.com/mitoma/sver/releases/download/v0.1.0/sver_linux_amd64.zip
+        unzip sver_linux_amd64.zip
+        
     - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
