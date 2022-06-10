@@ -16,15 +16,15 @@ jobs:
         mv sver_linux_amd64/sver /usr/local/bin
         rm -rf sver_linux_amd64.zip sver_linux_amd64
         sver --help
+    - uses: actions/checkout@v3
     - id: calc_version
       name: calc current version
       run: echo "##[set-output name=version;]$(sver calc .)"
-    - uses: actions/checkout@v3
     - name: Build
       run: cargo build --verbose
     - name: Lint
       run: cargo clippy --verbose
     - name: Run tests
       run: cargo test --verbose
-    - name: Run tests
+    - name: Print version
       run: echo "version=${{ steps.calc_version.outputs.version }}"
