@@ -27,8 +27,9 @@ jobs:
     # ci phase
     - name: Build
       uses: ./.github/actions/setup_sver
-      phase: build
-      command: cargo build --verbose
+      with:
+        phase: build
+        command: cargo build --verbose
 #    - name: Lint
 #      if: ${{ steps.ci_result.outputs.lint != 0 }}
 #      run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
