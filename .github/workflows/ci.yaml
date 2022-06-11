@@ -26,7 +26,7 @@ jobs:
 
     # ci phase
     - name: Build
-      uses: ./.github/actions/setup_sver
+      uses: ./.github/actions/sver
       with:
         phase: build
         command: cargo build --verbose
