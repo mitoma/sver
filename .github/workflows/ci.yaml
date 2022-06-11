@@ -34,7 +34,7 @@ jobs:
       uses: ./.github/actions/sver
       with:
         phase: lint
-        command: cargo cargo --verbose
+        command: cargo clippy --verbose
     - name: Test
       uses: ./.github/actions/sver
       with:
