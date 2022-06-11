@@ -45,9 +45,9 @@ jobs:
     - name: Check ci-result
       id: ci_result
       run: |
-        echo "##[set-output name=build;]$(test -f ci-result/build-${{ steps.calc_version.outputs.version }}.success)"
-        echo "##[set-output name=lint;]$(test -f ci-result/lint-${{ steps.calc_version.outputs.version }}.success)"
-        echo "##[set-output name=test;]$(test -f ci-result/test-${{ steps.calc_version.outputs.version }}.success)"
+        echo "##[set-output name=build;]$(test -f ci-result/build-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
+        echo "##[set-output name=lint;]$(test -f ci-result/lint-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
+        echo "##[set-output name=test;]$(test -f ci-result/test-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
 
     # ci phase
     - name: Build
