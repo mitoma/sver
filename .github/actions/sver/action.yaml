@@ -18,7 +18,7 @@ runs:
   steps:
     - name: Create ci-result dir
       shell: bash
-      run: mkdir ci-result
+      run: mkdir -p ci-result
     - id: calc_version
       name: calc current version
       shell: bash
@@ -29,7 +29,7 @@ runs:
       uses: actions/cache@v3
       with:
         key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
-        path: ci-result
+        path: ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
     - name: Check ci-result
       id: ci_result
       shell: bash
