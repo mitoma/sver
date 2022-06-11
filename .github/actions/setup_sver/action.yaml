@@ -1,0 +1,15 @@
+name: "setup sver"
+description: "setup sver"
+
+runs:
+  using: "composite"
+  steps:
+    - name: install sver
+      shell: bash
+      run: |
+        TEMPDIR=$(mktemp -d)
+        cd $TEMPDIR
+        wget https://github.com/mitoma/sver/releases/download/v0.1.0/sver_linux_amd64.zip
+        unzip sver_linux_amd64.zip
+        mv sver_linux_amd64/sver /usr/local/bin
+        sver --help

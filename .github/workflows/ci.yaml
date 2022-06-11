@@ -12,13 +12,7 @@ jobs:
     - uses: actions/checkout@v3
 
     # setup and calc version
-    - name: install sver
-      run: |
-        wget https://github.com/mitoma/sver/releases/download/v0.1.0/sver_linux_amd64.zip
-        unzip sver_linux_amd64.zip
-        mv sver_linux_amd64/sver /usr/local/bin
-        rm -rf sver_linux_amd64.zip sver_linux_amd64
-        sver --help
+    - uses: ./.github/actions/setup_sver
     - id: calc_version
       name: calc current version
       run: |
