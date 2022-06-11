@@ -13,20 +13,8 @@ jobs:
 
     # setup and calc version
     - uses: ./.github/actions/setup_sver
-    - id: calc_version
-      name: calc current version
-      run: |
-        version="$(sver calc .)"
-        echo "##[set-output name=version;]${version}"
 
     # setup cache
-    - name: Create ci-result dir
-      run: mkdir ci-result
-    - name: Cache ci result
-      uses: actions/cache@v3
-      with:
-        key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
-        path: ci-result
     - name: Cache cargo dependency
       uses: actions/cache@v3
       with:
@@ -36,24 +24,14 @@ jobs:
           ~/.cargo/git
           target
 
-    - name: Check ci-result
-      id: ci_result
-      run: |
-        echo "##[set-output name=build;]$(test -f ci-result/build-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
-        echo "##[set-output name=lint;]$(test -f ci-result/lint-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
-        echo "##[set-output name=test;]$(test -f ci-result/test-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
-
     # ci phase
     - name: Build
-      if: ${{ steps.ci_result.outputs.build != 0 }}
-      run: cargo build --verbose && touch ci-result/build-${{ steps.calc_version.outputs.version }}.success
-    - name: Lint
-      if: ${{ steps.ci_result.outputs.lint != 0 }}
-      run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
-    - name: Run tests
-      if: ${{ steps.ci_result.outputs.test != 0 }}
-      run: cargo test --verbose && touch ci-result/test-${{ steps.calc_version.outputs.version }}.success
-
-    # omake
-    - name: Print version
-      run: echo "version=${{ steps.calc_version.outputs.version }}"
+      uses: ./.github/actions/setup_sver
+      phase: build
+      command: cargo build --verbose
+#    - name: Lint
+#      if: ${{ steps.ci_result.outputs.lint != 0 }}
+#      run: cargo clippy --verbose && touch ci-result/lint-${{ steps.calc_version.outputs.version }}.success
+#    - name: Run tests
+#      if: ${{ steps.ci_result.outputs.test != 0 }}
+#      run: cargo test --verbose && touch ci-result/test-${{ steps.calc_version.outputs.version }}.success
