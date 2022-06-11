@@ -1,5 +1,6 @@
 name: "execute with sver"
-description: "execute with sver"
+description: |
+  すでに同じバージョンに対してジョブが未成功のときのみ実行する command を実行する。
 
 inputs:
   phase:
@@ -39,6 +40,11 @@ runs:
       if: ${{ steps.ci_result.outputs.status != 0 }}
       shell: bash
       run: "${{ inputs.command }}"
-    - name: save
+    - name: save result
+      if: ${{ steps.ci_result.outputs.status != 0 }}
       shell: bash
       run: touch ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+    - name: echo skip log
+      if: ${{ steps.ci_result.outputs.status == 0 }}
+      shell: bash
+      run: echo "job is already succeeded. skip this job."
