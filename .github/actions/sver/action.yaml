@@ -14,6 +14,15 @@ inputs:
     required: false
     default: '.'
 
+  cache_key:
+    description: 'cache key'
+    required: false
+    default: ''
+  cache_path:
+    description: 'cache path'
+    required: false
+    default: ''
+
 runs:
   using: "composite"
   steps:
@@ -36,10 +45,19 @@ runs:
       shell: bash
       run: |
         echo "##[set-output name=status;]$(test -f ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
+
+    - name: restore cache
+      if: ${{ steps.ci_result.outputs.status != 0 && inputs.cache_key != '' && inputs.cache_path != '' }}
+      uses: actions/cache@v3
+      with:
+        key: "${{ inputs.cache_key }}"
+        path: "${{ inputs.cache_path }}"
+
     - name: execute
       if: ${{ steps.ci_result.outputs.status != 0 }}
       shell: bash
       run: "${{ inputs.command }}"
+
     - name: save result
       if: ${{ steps.ci_result.outputs.status != 0 }}
       shell: bash

@@ -14,29 +14,34 @@ jobs:
     # setup and calc version
     - uses: ./.github/actions/setup_sver
 
-    # setup cache
-    - name: Cache cargo dependency
-      uses: actions/cache@v3
-      with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-
     # ci phase
     - name: Build
       uses: ./.github/actions/sver
       with:
         phase: build
         command: cargo build --verbose
+        cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        cache_path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
     - name: Lint
       uses: ./.github/actions/sver
       with:
         phase: lint
         command: cargo clippy --verbose
+        cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        cache_path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
     - name: Test
       uses: ./.github/actions/sver
       with:
         phase: test
         command: cargo test --verbose
+        cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        cache_path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
