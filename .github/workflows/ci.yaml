@@ -16,7 +16,7 @@ jobs:
 
     # ci phase
     - name: Build
-      uses: ./.github/actions/sver
+      uses: ./.github/actions/exec_sver
       with:
         phase: build
         command: cargo build --verbose
@@ -26,7 +26,7 @@ jobs:
           ~/.cargo/git
           target
     - name: Lint
-      uses: ./.github/actions/sver
+      uses: ./.github/actions/exec_sver
       with:
         phase: lint
         command: cargo clippy --verbose
@@ -36,7 +36,7 @@ jobs:
           ~/.cargo/git
           target
     - name: Test
-      uses: ./.github/actions/sver
+      uses: ./.github/actions/exec_sver
       with:
         phase: test
         command: cargo test --verbose
