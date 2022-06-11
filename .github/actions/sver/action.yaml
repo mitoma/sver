@@ -17,14 +17,14 @@ runs:
   using: "composite"
   steps:
     - name: Create ci-result dir
+      shell: bash
       run: mkdir ci-result
     - id: calc_version
       name: calc current version
+      shell: bash
       run: |
         version="$(sver calc ${{ inputs.path }})"
         echo "##[set-output name=version;]${version}"
-    - name: cal
-      run: mkdir ci-result
     - name: Cache ci result
       uses: actions/cache@v3
       with:
@@ -32,10 +32,13 @@ runs:
         path: ci-result
     - name: Check ci-result
       id: ci_result
+      shell: bash
       run: |
         echo "##[set-output name=status;]$(test -f ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success ; echo $?)"
     - name: execute
       if: ${{ steps.ci_result.outputs.already_runned != 0 }}
+      shell: bash
       run: "${{ inputs.command }}"
     - name: save
+      shell: bash
       run: touch ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
