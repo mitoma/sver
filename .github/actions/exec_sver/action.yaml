@@ -35,12 +35,16 @@ runs:
       run: |
         version="$(sver calc ${{ inputs.path }})"
         echo "##[set-output name=version;]${version}"
+
     - id: ci_result
-      name: Cache ci result
-      uses: actions/cache@v3
+      name: Download ci_result
+      uses: dawidd6/action-download-artifact@v2
+      continue-on-error: true
       with:
-        key: ${{ runner.os }}-ci-result-${{ steps.calc_version.outputs.version }}
-        path: ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+        workflow: ci.yaml
+        workflow_conclusion: success
+        name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+
     - name: restore cache
       if: ${{ steps.ci_result.outputs.cache-hit != 'true' && inputs.cache_key != '' && inputs.cache_path != '' }}
       uses: actions/cache@v3
@@ -49,15 +53,22 @@ runs:
         path: "${{ inputs.cache_path }}"
 
     - name: execute
-      if: ${{ steps.ci_result.outputs.cache-hit != 'true' }}
+      if: ${{ steps.ci_result.outcome == 'failure' }}
       shell: bash
       run: "${{ inputs.command }}"
 
     - name: save result
-      if: ${{ steps.ci_result.outputs.cache-hit != 'true' }}
+      if: ${{ steps.ci_result.outcome == 'failure' }}
       shell: bash
       run: touch ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+
+    - uses: actions/upload-artifact@v3
+      if: ${{ steps.ci_result.outcome == 'failure' }}
+      with:
+        name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+        path: ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+
     - name: echo skip log
-      if: ${{ steps.ci_result.outputs.cache-hit == 'true' }}
+      if: ${{ steps.ci_result.outcome == 'success' }}
       shell: bash
       run: echo "job is already succeeded. skip this job."
