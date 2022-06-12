@@ -46,7 +46,7 @@ runs:
       run: gh run download -n '${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success'
       continue-on-error: true
       env:
-        GITHUB_TOKEN: ${{ input.github_token }}
+        GITHUB_TOKEN: ${{ inputs.github_token }}
     - name: restore cache
       if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
       uses: actions/cache@v3
