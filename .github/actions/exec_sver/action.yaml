@@ -48,7 +48,7 @@ runs:
         workflow: '${{ inputs.workflow_name }}'
         workflow_conclusion: success
         name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
-        search_artifacts: false
+        search_artifacts: true
 
     - name: restore cache
       if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
