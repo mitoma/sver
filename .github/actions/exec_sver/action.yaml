@@ -45,8 +45,7 @@ runs:
       uses: dawidd6/action-download-artifact@v2
       continue-on-error: true
       with:
-        workflow: ci.yaml
-        workflow_conclusion: success
+        workflow: '${{ inputs.workflow_name }}'
         name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
 
     - name: restore cache
