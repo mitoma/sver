@@ -14,10 +14,6 @@ inputs:
     required: false
     default: '.'
 
-  workflow_name:
-    description: 'workflow name for search artifact'
-    required: true
-
   cache_key:
     description: 'cache key'
     required: false
@@ -42,11 +38,9 @@ runs:
 
     - id: ci_result
       name: Download ci_result
-      uses: dawidd6/action-download-artifact@v2
+      shell: bash
+      run: gh run download -n ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
       continue-on-error: true
-      with:
-        workflow: '${{ inputs.workflow_name }}'
-        name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
 
     - name: restore cache
       if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
