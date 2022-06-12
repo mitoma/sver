@@ -1,3 +1,5 @@
+name: "Continuous integration"
+
 on: [push, pull_request]
 
 env:
@@ -18,6 +20,7 @@ jobs:
     - name: Build
       uses: ./.github/actions/exec_sver
       with:
+        workflow_name: "Continuous integration"
         phase: build
         command: cargo build --verbose
         cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -28,6 +31,7 @@ jobs:
     - name: Lint
       uses: ./.github/actions/exec_sver
       with:
+        workflow_name: "Continuous integration"
         phase: lint
         command: cargo clippy --verbose
         cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
@@ -38,6 +42,7 @@ jobs:
     - name: Test
       uses: ./.github/actions/exec_sver
       with:
+        workflow_name: "Continuous integration"
         phase: test
         command: cargo test --verbose
         cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}

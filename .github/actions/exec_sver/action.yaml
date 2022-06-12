@@ -14,6 +14,10 @@ inputs:
     required: false
     default: '.'
 
+  workflow_name:
+    description: 'workflow name for search artifact'
+    required: true
+
   cache_key:
     description: 'cache key'
     required: false
