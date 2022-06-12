@@ -39,9 +39,10 @@ runs:
     - id: ci_result
       name: Download ci_result
       shell: bash
-      run: gh run download -n ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+      run: gh run download -n '${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success'
       continue-on-error: true
-
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: restore cache
       if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
       uses: actions/cache@v3
