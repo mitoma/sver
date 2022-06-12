@@ -1,6 +1,6 @@
 [default]
 dependencies = []
 excludes = [
-    "doc",
+  "doc",
+  "testdata",
 ]
-
