@@ -50,7 +50,7 @@ runs:
         name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
 
     - name: restore cache
-      if: ${{ steps.ci_result.outputs.cache-hit != 'true' && inputs.cache_key != '' && inputs.cache_path != '' }}
+      if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
       uses: actions/cache@v3
       with:
         key: "${{ inputs.cache_key }}"
