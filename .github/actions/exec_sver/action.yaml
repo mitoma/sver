@@ -43,34 +43,37 @@ runs:
     - id: ci_result
       name: Download ci_result
       shell: bash
-      run: gh run download -n '${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success'
-      continue-on-error: true
+      run: |
+        exit_code=0
+        gh run download -n '${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success' || exit_code=$?
+        echo "##[set-output name=exit_code;]${exit_code}"
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
+
     - name: restore cache
-      if: ${{ steps.ci_result.outcome == 'failure' && inputs.cache_key != '' && inputs.cache_path != '' }}
+      if: ${{ steps.ci_result.outputs.exit_code != '0' && inputs.cache_key != '' && inputs.cache_path != '' }}
       uses: actions/cache@v3
       with:
         key: "${{ inputs.cache_key }}"
         path: "${{ inputs.cache_path }}"
 
     - name: execute
-      if: ${{ steps.ci_result.outcome == 'failure' }}
+      if: ${{ steps.ci_result.outputs.exit_code != '0' }}
       shell: bash
       run: "${{ inputs.command }}"
 
     - name: save result
-      if: ${{ steps.ci_result.outcome == 'failure' }}
+      if: ${{ steps.ci_result.outputs.exit_code != '0' }}
       shell: bash
       run: touch ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
 
     - uses: actions/upload-artifact@v3
-      if: ${{ steps.ci_result.outcome == 'failure' }}
+      if: ${{ steps.ci_result.outputs.exit_code != '0' }}
       with:
         name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
         path: ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
 
     - name: echo skip log
-      if: ${{ steps.ci_result.outcome == 'success' }}
+      if: ${{ steps.ci_result.outputs.exit_code == '0' }}
       shell: bash
       run: echo "job is already succeeded. skip this job."
