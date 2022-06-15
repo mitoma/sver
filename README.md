@@ -1,2 +1,2 @@
 # sver
-Version generator based on source code.
+Version calcurator based on source code.

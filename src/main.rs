@@ -27,7 +27,7 @@ fn main() -> ExitCode {
 }
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about = "version calucurator for git repository", long_about = None)]
+#[clap(author, version, about = "Version calcurator based on source code.", long_about = None)]
 struct Args {
     #[clap(subcommand)]
     command: Commands,
