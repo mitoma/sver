@@ -1,3 +1,4 @@
+// sver.toml ファイルの操作を扱うモジュール
 use std::{collections::BTreeMap, error::Error};
 
 use serde::{Deserialize, Serialize};
