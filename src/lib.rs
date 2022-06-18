@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use self::filemode::SverFileMode;
+use self::filemode::FileMode;
 use git2::{Oid, Repository};
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -84,7 +84,7 @@ fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Erro
 
 struct OidAndMode {
     oid: Oid,
-    mode: SverFileMode,
+    mode: FileMode,
 }
 
 fn calc_hash_string(

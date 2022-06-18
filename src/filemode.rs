@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, Copy)]
-pub(crate) enum SverFileMode {
+pub(crate) enum FileMode {
     Blob,
     BlobExecutable,
     Commit,
@@ -9,30 +9,30 @@ pub(crate) enum SverFileMode {
     Unknown,
 }
 
-impl From<u32> for SverFileMode {
+impl From<u32> for FileMode {
     fn from(value: u32) -> Self {
         match value {
-            libgit2_sys::GIT_FILEMODE_BLOB => SverFileMode::Blob,
-            libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE => SverFileMode::BlobExecutable,
-            libgit2_sys::GIT_FILEMODE_COMMIT => SverFileMode::Commit,
-            libgit2_sys::GIT_FILEMODE_LINK => SverFileMode::Link,
-            libgit2_sys::GIT_FILEMODE_TREE => SverFileMode::Tree,
-            libgit2_sys::GIT_FILEMODE_UNREADABLE => SverFileMode::Unreadable,
-            _ => SverFileMode::Unknown,
+            libgit2_sys::GIT_FILEMODE_BLOB => FileMode::Blob,
+            libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE => FileMode::BlobExecutable,
+            libgit2_sys::GIT_FILEMODE_COMMIT => FileMode::Commit,
+            libgit2_sys::GIT_FILEMODE_LINK => FileMode::Link,
+            libgit2_sys::GIT_FILEMODE_TREE => FileMode::Tree,
+            libgit2_sys::GIT_FILEMODE_UNREADABLE => FileMode::Unreadable,
+            _ => FileMode::Unknown,
         }
     }
 }
 
-impl From<SverFileMode> for u32 {
-    fn from(value: SverFileMode) -> Self {
+impl From<FileMode> for u32 {
+    fn from(value: FileMode) -> Self {
         match value {
-            SverFileMode::Blob => libgit2_sys::GIT_FILEMODE_BLOB,
-            SverFileMode::BlobExecutable => libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE,
-            SverFileMode::Commit => libgit2_sys::GIT_FILEMODE_COMMIT,
-            SverFileMode::Link => libgit2_sys::GIT_FILEMODE_LINK,
-            SverFileMode::Tree => libgit2_sys::GIT_FILEMODE_TREE,
-            SverFileMode::Unreadable => libgit2_sys::GIT_FILEMODE_UNREADABLE,
-            SverFileMode::Unknown => libgit2_sys::GIT_FILEMODE_UNREADABLE,
+            FileMode::Blob => libgit2_sys::GIT_FILEMODE_BLOB,
+            FileMode::BlobExecutable => libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE,
+            FileMode::Commit => libgit2_sys::GIT_FILEMODE_COMMIT,
+            FileMode::Link => libgit2_sys::GIT_FILEMODE_LINK,
+            FileMode::Tree => libgit2_sys::GIT_FILEMODE_TREE,
+            FileMode::Unreadable => libgit2_sys::GIT_FILEMODE_UNREADABLE,
+            FileMode::Unknown => libgit2_sys::GIT_FILEMODE_UNREADABLE,
         }
     }
 }
