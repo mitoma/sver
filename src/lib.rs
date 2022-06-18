@@ -1,12 +1,17 @@
+//pub mod cli_args;
+mod filemode;
+mod sver_config;
+
 use std::{
     collections::{BTreeMap, HashMap},
     error::Error,
     path::{Path, PathBuf},
 };
 
+use self::filemode::FileMode;
+use self::sver_config::SverConfig;
 use git2::{Oid, Repository};
 use log::debug;
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
@@ -61,14 +66,6 @@ pub struct Version {
     pub version: String,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-struct SverConfig {
-    #[serde(default)]
-    excludes: Vec<String>,
-    #[serde(default)]
-    dependencies: Vec<String>,
-}
-
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
     let repo_path = repo
         .workdir()
@@ -81,7 +78,7 @@ fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Erro
 
 struct OidAndMode {
     oid: Oid,
-    mode: u32,
+    mode: FileMode,
 }
 
 fn calc_hash_string(
@@ -95,10 +92,16 @@ fn calc_hash_string(
         hasher.update(path);
         // Q. Why little endian?
         // A. no reason.
-        hasher.update(oid_and_mode.mode.to_le_bytes());
+        hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
         let blob = repo.find_blob(oid_and_mode.oid)?;
         let content = blob.content();
         hasher.update(content);
+        debug!(
+            "path:{}, mode:{:?}, content:{}",
+            String::from_utf8(path.clone())?,
+            oid_and_mode.mode,
+            String::from_utf8(content.to_vec())?
+        )
     }
     let hash = format!("{:#x}", hasher.finalize());
     Ok(hash)
@@ -141,7 +144,7 @@ fn list_sorted_entries(
                 entry.path,
                 OidAndMode {
                     oid: entry.id,
-                    mode: entry.mode,
+                    mode: entry.mode.into(),
                 },
             );
         }
@@ -174,9 +177,8 @@ fn collect_path_and_excludes(
 
     if let Some(entry) = repo.index()?.get_path(p.as_path(), 0) {
         debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
-        let sver_config: BTreeMap<String, SverConfig> =
-            toml::from_slice(repo.find_blob(entry.id)?.content())?;
-        let default_config = sver_config["default"].clone();
+        let default_config =
+            SverConfig::load_profile(repo.find_blob(entry.id)?.content(), "default")?;
         path_and_excludes.insert(path.to_string(), default_config.excludes);
 
         for dependency_path in default_config.dependencies {

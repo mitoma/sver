@@ -1,8 +1,12 @@
+mod cli;
+
 use std::{error::Error, process::ExitCode};
 
-use clap::{Parser, Subcommand};
+use crate::cli::outputs::format_versions;
+
+use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
+use clap::Parser;
 use log::debug;
-use serde::Serialize;
 use sver::{calc_version, list_sources, Version};
 
 fn main() -> ExitCode {
@@ -26,66 +30,6 @@ fn main() -> ExitCode {
     }
 }
 
-#[derive(Parser, Debug)]
-#[clap(author, version, about = "Version calcurator based on source code.", long_about = None)]
-struct Args {
-    #[clap(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// calc version
-    Calc {
-        /// target paths
-        paths: Vec<String>,
-
-        #[clap(arg_enum, short, long, default_value = "version-only")]
-        output: OutputFormat,
-        #[clap(arg_enum, short, long, default_value = "short")]
-        length: VersionLength,
-    },
-    /// list package dependencies
-    List {
-        /// target path
-        #[clap(default_value = ".")]
-        path: String,
-    },
-}
-
-#[derive(Debug, Clone, clap::ArgEnum)]
-enum OutputFormat {
-    VersionOnly,
-    Toml,
-    Json,
-}
-
-#[derive(Debug, Clone, clap::ArgEnum)]
-enum VersionLength {
-    Short,
-    Long,
-}
-
-#[derive(Serialize)]
-struct VersionOutput {
-    repository_root: String,
-    path: String,
-    version: String,
-}
-
-#[derive(Serialize)]
-struct VersionsOutput {
-    versions: Vec<VersionOutput>,
-}
-
-#[derive(Serialize)]
-struct VersionFullOutput {
-    repository_root: String,
-    path: String,
-    short_version: String,
-    long_version: String,
-}
-
 fn calc(
     paths: Vec<String>,
     output: OutputFormat,
@@ -101,61 +45,11 @@ fn calc(
         .iter()
         .map(|p| crate::calc_version(p))
         .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
-    print_versions(&versions, output, length)?;
+    println!("{}", format_versions(&versions, output, length)?);
     Ok(())
 }
 
 fn list(path: String) -> Result<(), Box<dyn Error>> {
     list_sources(&path)?.iter().for_each(|s| println!("{}", s));
-    Ok(())
-}
-
-fn print_versions(
-    versions: &[Version],
-    output_format: OutputFormat,
-    version_length: VersionLength,
-) -> Result<(), Box<dyn Error>> {
-    let output: Vec<VersionOutput> = versions
-        .iter()
-        .map(|v| {
-            let mut version_string = v.version.clone();
-            match version_length {
-                VersionLength::Short => version_string.truncate(12),
-                VersionLength::Long => (),
-            };
-            VersionOutput {
-                repository_root: v.repository_root.clone(),
-                path: v.path.clone(),
-                version: version_string,
-            }
-        })
-        .collect();
-
-    let output_string = match output_format {
-        OutputFormat::VersionOnly => {
-            let out = output
-                .iter()
-                .map(|o| &o.version)
-                .cloned()
-                .collect::<Vec<String>>()
-                .join("\n");
-            out
-        }
-        OutputFormat::Toml => {
-            if output.len() == 1 {
-                toml::to_string(&output[0])?
-            } else {
-                toml::to_string(&VersionsOutput { versions: output })?
-            }
-        }
-        OutputFormat::Json => {
-            if output.len() == 1 {
-                serde_json::to_string_pretty(&output[0])?
-            } else {
-                serde_json::to_string_pretty(&output)?
-            }
-        }
-    };
-    println!("{}", output_string);
     Ok(())
 }
