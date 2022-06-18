@@ -2,7 +2,7 @@ mod cli;
 
 use std::{error::Error, process::ExitCode};
 
-use crate::cli::outputs::print_versions;
+use crate::cli::outputs::format_versions;
 
 use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
@@ -45,7 +45,7 @@ fn calc(
         .iter()
         .map(|p| crate::calc_version(p))
         .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
-    print_versions(&versions, output, length)?;
+    println!("{}", format_versions(&versions, output, length)?);
     Ok(())
 }
 

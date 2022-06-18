@@ -25,11 +25,11 @@ struct VersionFullOutput {
     long_version: String,
 }
 
-pub(crate) fn print_versions(
+pub(crate) fn format_versions(
     versions: &[Version],
     output_format: OutputFormat,
     version_length: VersionLength,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<String, Box<dyn Error>> {
     let output: Vec<VersionOutput> = versions
         .iter()
         .map(|v| {
@@ -71,6 +71,5 @@ pub(crate) fn print_versions(
             }
         }
     };
-    println!("{}", output_string);
-    Ok(())
+    Ok(output_string)
 }
