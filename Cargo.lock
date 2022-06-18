@@ -514,6 +514,7 @@ dependencies = [
  "clap",
  "env_logger",
  "git2",
+ "libgit2-sys",
  "log",
  "serde",
  "serde_json",

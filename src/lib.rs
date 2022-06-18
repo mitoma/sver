@@ -81,7 +81,7 @@ fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Erro
 
 struct OidAndMode {
     oid: Oid,
-    mode: u32,
+    mode: SverFileMode,
 }
 
 fn calc_hash_string(
@@ -95,10 +95,16 @@ fn calc_hash_string(
         hasher.update(path);
         // Q. Why little endian?
         // A. no reason.
-        hasher.update(oid_and_mode.mode.to_le_bytes());
+        hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
         let blob = repo.find_blob(oid_and_mode.oid)?;
         let content = blob.content();
         hasher.update(content);
+        debug!(
+            "path:{}, mode:{:?}, content:{}",
+            String::from_utf8(path.clone())?,
+            oid_and_mode.mode,
+            String::from_utf8(content.to_vec())?
+        )
     }
     let hash = format!("{:#x}", hasher.finalize());
     Ok(hash)
@@ -141,12 +147,51 @@ fn list_sorted_entries(
                 entry.path,
                 OidAndMode {
                     oid: entry.id,
-                    mode: entry.mode,
+                    mode: entry.mode.into(),
                 },
             );
         }
     }
     Ok(map)
+}
+
+#[derive(Debug, Clone, Copy)]
+enum SverFileMode {
+    Blob,
+    BlobExecutable,
+    Commit,
+    Link,
+    Tree,
+    Unreadable,
+    Unknown,
+}
+
+impl From<u32> for SverFileMode {
+    fn from(value: u32) -> Self {
+        match value {
+            libgit2_sys::GIT_FILEMODE_BLOB => SverFileMode::Blob,
+            libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE => SverFileMode::BlobExecutable,
+            libgit2_sys::GIT_FILEMODE_COMMIT => SverFileMode::Commit,
+            libgit2_sys::GIT_FILEMODE_LINK => SverFileMode::Link,
+            libgit2_sys::GIT_FILEMODE_TREE => SverFileMode::Tree,
+            libgit2_sys::GIT_FILEMODE_UNREADABLE => SverFileMode::Unreadable,
+            _ => SverFileMode::Unknown,
+        }
+    }
+}
+
+impl From<SverFileMode> for u32 {
+    fn from(value: SverFileMode) -> Self {
+        match value {
+            SverFileMode::Blob => libgit2_sys::GIT_FILEMODE_BLOB,
+            SverFileMode::BlobExecutable => libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE,
+            SverFileMode::Commit => libgit2_sys::GIT_FILEMODE_COMMIT,
+            SverFileMode::Link => libgit2_sys::GIT_FILEMODE_LINK,
+            SverFileMode::Tree => libgit2_sys::GIT_FILEMODE_TREE,
+            SverFileMode::Unreadable => libgit2_sys::GIT_FILEMODE_UNREADABLE,
+            SverFileMode::Unknown => libgit2_sys::GIT_FILEMODE_UNREADABLE,
+        }
+    }
 }
 
 const SEPARATOR: &[u8] = "/".as_bytes();
