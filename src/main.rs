@@ -1,11 +1,12 @@
-mod cli_args;
+mod cli;
 
 use std::{error::Error, process::ExitCode};
 
-use self::cli_args::{Args, Commands, OutputFormat, VersionLength};
+use crate::cli::outputs::{VersionOutput, VersionsOutput};
+
+use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
 use log::debug;
-use serde::Serialize;
 use sver::{calc_version, list_sources, Version};
 
 fn main() -> ExitCode {
@@ -27,26 +28,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-#[derive(Serialize)]
-struct VersionOutput {
-    repository_root: String,
-    path: String,
-    version: String,
-}
-
-#[derive(Serialize)]
-struct VersionsOutput {
-    versions: Vec<VersionOutput>,
-}
-
-#[derive(Serialize)]
-struct VersionFullOutput {
-    repository_root: String,
-    path: String,
-    short_version: String,
-    long_version: String,
 }
 
 fn calc(
