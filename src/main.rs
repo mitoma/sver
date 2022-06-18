@@ -1,6 +1,9 @@
+mod cli_args;
+
 use std::{error::Error, process::ExitCode};
 
-use clap::{Parser, Subcommand};
+use self::cli_args::{Args, Commands, OutputFormat, VersionLength};
+use clap::Parser;
 use log::debug;
 use serde::Serialize;
 use sver::{calc_version, list_sources, Version};
@@ -24,46 +27,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
     }
-}
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about = "Version calcurator based on source code.", long_about = None)]
-struct Args {
-    #[clap(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    /// calc version
-    Calc {
-        /// target paths
-        paths: Vec<String>,
-
-        #[clap(arg_enum, short, long, default_value = "version-only")]
-        output: OutputFormat,
-        #[clap(arg_enum, short, long, default_value = "short")]
-        length: VersionLength,
-    },
-    /// list package dependencies
-    List {
-        /// target path
-        #[clap(default_value = ".")]
-        path: String,
-    },
-}
-
-#[derive(Debug, Clone, clap::ArgEnum)]
-enum OutputFormat {
-    VersionOnly,
-    Toml,
-    Json,
-}
-
-#[derive(Debug, Clone, clap::ArgEnum)]
-enum VersionLength {
-    Short,
-    Long,
 }
 
 #[derive(Serialize)]
