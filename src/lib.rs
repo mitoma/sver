@@ -1,4 +1,5 @@
 mod filemode;
+mod sver_config;
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -7,9 +8,9 @@ use std::{
 };
 
 use self::filemode::FileMode;
+use self::sver_config::SverConfig;
 use git2::{Oid, Repository};
 use log::debug;
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
@@ -62,14 +63,6 @@ pub struct Version {
     pub repository_root: String,
     pub path: String,
     pub version: String,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
-struct SverConfig {
-    #[serde(default)]
-    excludes: Vec<String>,
-    #[serde(default)]
-    dependencies: Vec<String>,
 }
 
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
@@ -183,9 +176,8 @@ fn collect_path_and_excludes(
 
     if let Some(entry) = repo.index()?.get_path(p.as_path(), 0) {
         debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
-        let sver_config: BTreeMap<String, SverConfig> =
-            toml::from_slice(repo.find_blob(entry.id)?.content())?;
-        let default_config = sver_config["default"].clone();
+        let default_config =
+            SverConfig::load_profile(repo.find_blob(entry.id)?.content(), "default")?;
         path_and_excludes.insert(path.to_string(), default_config.excludes);
 
         for dependency_path in default_config.dependencies {
