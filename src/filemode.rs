@@ -1,6 +1,6 @@
 // 本当は git2::FileMode を使いたかったが
 // なぜか u32 → FileMode への変換を提供してくれていないので自前で用意する。
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum FileMode {
     Blob,
     BlobExecutable,
