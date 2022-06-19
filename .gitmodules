@@ -1,0 +1,3 @@
+[submodule "testdata/submodule/bano"]
+	path = testdata/submodule/bano
+	url = https://github.com/mitoma/bano
