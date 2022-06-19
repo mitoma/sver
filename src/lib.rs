@@ -1,4 +1,3 @@
-//pub mod cli_args;
 mod filemode;
 mod sver_config;
 
@@ -148,9 +147,10 @@ fn list_sorted_entries(
             include_file && !exclude_file
         });
         debug!(
-            "{:?}, containable:{}",
-            String::from_utf8(entry.path.clone()),
-            containable
+            "path:{}, containable:{}, mode:{:?}",
+            String::from_utf8(entry.path.clone())?,
+            containable,
+            FileMode::from(entry.mode),
         );
         if containable {
             debug!("add path:{:?}", String::from_utf8(entry.path.clone()));
