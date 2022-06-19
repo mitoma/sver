@@ -15,7 +15,9 @@ use log::debug;
 use sha2::{Digest, Sha256};
 
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    let (repo, _work_dir, target_path) = resolve_target_repo_and_path(path)?;
+    let ResolvePathResult {
+        repo, target_path, ..
+    } = resolve_target_repo_and_path(path)?;
 
     let entries = list_sorted_entries(&repo, &target_path)?;
     let result: Vec<String> = entries
@@ -26,7 +28,11 @@ pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
 }
 
 pub fn calc_version(path: &str) -> Result<Version, Box<dyn Error>> {
-    let (repo, work_dir, target_path) = resolve_target_repo_and_path(path)?;
+    let ResolvePathResult {
+        repo,
+        work_dir,
+        target_path,
+    } = resolve_target_repo_and_path(path)?;
 
     let entries = list_sorted_entries(&repo, &target_path)?;
     let version = calc_hash_string(&repo, target_path.as_bytes(), &entries)?;
@@ -39,9 +45,13 @@ pub fn calc_version(path: &str) -> Result<Version, Box<dyn Error>> {
     Ok(version)
 }
 
-fn resolve_target_repo_and_path(
-    path: &str,
-) -> Result<(Repository, String, String), Box<dyn Error>> {
+struct ResolvePathResult {
+    repo: Repository,
+    work_dir: String,
+    target_path: String,
+}
+
+fn resolve_target_repo_and_path(path: &str) -> Result<ResolvePathResult, Box<dyn Error>> {
     let target_path = Path::new(path);
     let repo = find_repository(target_path)?;
     let target_path = relative_path(&repo, target_path)?;
@@ -57,7 +67,11 @@ fn resolve_target_repo_and_path(
         .to_string();
     debug!("repository_root:{}", work_dir);
     debug!("target_path:{}", target_path);
-    Ok((repo, work_dir, target_path))
+    Ok(ResolvePathResult {
+        repo,
+        work_dir,
+        target_path,
+    })
 }
 
 pub struct Version {
