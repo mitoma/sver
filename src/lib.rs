@@ -103,18 +103,34 @@ fn calc_hash_string(
     hasher.update(target_path);
     for (path, oid_and_mode) in source {
         hasher.update(path);
-        // Q. Why little endian?
-        // A. no reason.
-        hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
-        let blob = repo.find_blob(oid_and_mode.oid)?;
-        let content = blob.content();
-        hasher.update(content);
-        debug!(
-            "path:{}, mode:{:?}, content:{}",
-            String::from_utf8(path.clone())?,
-            oid_and_mode.mode,
-            String::from_utf8(content.to_vec())?
-        )
+        match oid_and_mode.mode {
+            FileMode::Blob => {
+                // Q. Why little endian?
+                // A. no reason.
+                hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
+                let blob = repo.find_blob(oid_and_mode.oid)?;
+                let content = blob.content();
+                hasher.update(content);
+                debug!(
+                    "path:{}, mode:{:?}, content:{}",
+                    String::from_utf8(path.clone())?,
+                    oid_and_mode.mode,
+                    String::from_utf8(content.to_vec())?
+                )
+            }
+            // Commit (Submodule の場合は参照先のコミットハッシュを計算対象に加える)
+            FileMode::Commit => {
+                debug!("commit_hash?:{}", oid_and_mode.oid);
+                hasher.update(oid_and_mode.oid);
+            }
+            _ => {
+                debug!(
+                    "unsupported mode. skipped. path:{}, mode:{:?}",
+                    String::from_utf8(path.clone())?,
+                    oid_and_mode.mode
+                )
+            }
+        }
     }
     let hash = format!("{:#x}", hasher.finalize());
     Ok(hash)
@@ -223,11 +239,13 @@ mod tests {
         sync::Once,
     };
 
-    use git2::{build::CheckoutBuilder, Commit, IndexAddOption, ObjectType, Repository, Signature};
+    use git2::{
+        build::CheckoutBuilder, Commit, IndexAddOption, ObjectType, Oid, Repository, Signature,
+    };
     use log::debug;
     use uuid::Uuid;
 
-    use crate::{calc_hash_string, list_sorted_entries};
+    use crate::{calc_hash_string, filemode::FileMode, list_sorted_entries};
 
     static INIT: Once = Once::new();
 
@@ -504,6 +522,61 @@ mod tests {
         assert_eq!(
             hash,
             "a53b015257360d95600b8f0b749c01a651e803aa05395a8f6b39e194f95c3dfe"
+        );
+    }
+
+    fn add_submodule(
+        repo: &mut Repository,
+        external_repo_url: &str,
+        path: &str,
+        commit_hash: &str,
+    ) {
+        let path_obj = Path::new(path);
+        let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
+        submodule.clone(None).unwrap();
+        submodule.add_finalize().unwrap();
+        let submodule_repo = submodule.open().unwrap();
+        submodule_repo
+            .set_head_detached(Oid::from_str(commit_hash).unwrap())
+            .unwrap();
+    }
+
+    // repo layout
+    // .
+    // + bano → submodule https://github.com/mitoma/bano ec3774f3ad6abb46344cab9662a569a2f8231642
+    #[test]
+    fn has_submodule() {
+        initialize();
+
+        // setup
+        let mut repo = setup_test_repository();
+        add_submodule(
+            &mut repo,
+            "https://github.com/mitoma/bano",
+            "bano",
+            "ec3774f3ad6abb46344cab9662a569a2f8231642",
+        );
+
+        add_and_commit(&repo, None, "setup").unwrap();
+        let target_path = "";
+
+        // exercise
+        let entries = list_sorted_entries(&repo, target_path).unwrap();
+        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+
+        // verify
+        assert_eq!(entries.len(), 2);
+
+        let mut iter = entries.iter();
+        let (key, _) = iter.next().unwrap();
+        assert_eq!(".gitmodules".as_bytes(), key);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("bano".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Commit);
+
+        assert_eq!(
+            hash,
+            "2600f60368549f186d7b48fe48765dbd57580cc416e91dc3fbca264d62d18f31"
         );
     }
 }
