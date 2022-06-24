@@ -145,23 +145,7 @@ fn list_sorted_entries(
     debug!("dependency_paths:{:?}", path_set);
     let mut map = BTreeMap::new();
     for entry in repo.index()?.iter() {
-        let containable = path_set.iter().any(|(include, excludes)| {
-            let include_file =
-                match_samefile_or_include_dir(entry.path.as_slice(), include.as_bytes());
-            let exclude_file = excludes.iter().any(|exclude| {
-                if include.is_empty() {
-                    match_samefile_or_include_dir(entry.path.as_slice(), exclude.as_bytes())
-                } else {
-                    match_samefile_or_include_dir(
-                        entry.path.as_slice(),
-                        [include.as_bytes(), SEPARATOR, exclude.as_bytes()]
-                            .concat()
-                            .as_slice(),
-                    )
-                }
-            });
-            include_file && !exclude_file
-        });
+        let containable = containable(entry.path.as_slice(), &path_set);
         debug!(
             "path:{}, containable:{}, mode:{:?}",
             String::from_utf8(entry.path.clone())?,
@@ -183,6 +167,26 @@ fn list_sorted_entries(
 }
 
 const SEPARATOR: &[u8] = "/".as_bytes();
+
+fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> bool {
+    path_set.iter().any(|(include, excludes)| {
+        let include_file = match_samefile_or_include_dir(test_path, include.as_bytes());
+        let exclude_file = excludes.iter().any(|exclude| {
+            if include.is_empty() {
+                match_samefile_or_include_dir(test_path, exclude.as_bytes())
+            } else {
+                match_samefile_or_include_dir(
+                    test_path,
+                    [include.as_bytes(), SEPARATOR, exclude.as_bytes()]
+                        .concat()
+                        .as_slice(),
+                )
+            }
+        });
+        include_file && !exclude_file
+    })
+}
+
 fn match_samefile_or_include_dir(test_path: &[u8], path: &[u8]) -> bool {
     let is_same_file = test_path == path;
     let is_contain_path =
