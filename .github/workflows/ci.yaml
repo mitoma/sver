@@ -28,6 +28,7 @@ jobs:
           cargo build --verbose
           cargo test --verbose
         cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        cache_restore-keys: ${{ runner.os }}-cargo-
         cache_path: |
           ~/.cargo/registry
           ~/.cargo/git
