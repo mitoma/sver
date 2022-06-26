@@ -11,15 +11,22 @@ pub(crate) enum FileMode {
     Unknown,
 }
 
+const GIT_FILEMODE_BLOB: u32 = libgit2_sys::GIT_FILEMODE_BLOB as u32;
+const GIT_FILEMODE_BLOB_EXECUTABLE: u32 = libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE as u32;
+const GIT_FILEMODE_COMMIT: u32 = libgit2_sys::GIT_FILEMODE_COMMIT as u32;
+const GIT_FILEMODE_LINK: u32 = libgit2_sys::GIT_FILEMODE_LINK as u32;
+const GIT_FILEMODE_TREE: u32 = libgit2_sys::GIT_FILEMODE_TREE as u32;
+const GIT_FILEMODE_UNREADABLE: u32 = libgit2_sys::GIT_FILEMODE_UNREADABLE as u32;
+
 impl From<u32> for FileMode {
     fn from(value: u32) -> Self {
         match value {
-            libgit2_sys::GIT_FILEMODE_BLOB => FileMode::Blob,
-            libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE => FileMode::BlobExecutable,
-            libgit2_sys::GIT_FILEMODE_COMMIT => FileMode::Commit,
-            libgit2_sys::GIT_FILEMODE_LINK => FileMode::Link,
-            libgit2_sys::GIT_FILEMODE_TREE => FileMode::Tree,
-            libgit2_sys::GIT_FILEMODE_UNREADABLE => FileMode::Unreadable,
+            GIT_FILEMODE_BLOB => FileMode::Blob,
+            GIT_FILEMODE_BLOB_EXECUTABLE => FileMode::BlobExecutable,
+            GIT_FILEMODE_COMMIT => FileMode::Commit,
+            GIT_FILEMODE_LINK => FileMode::Link,
+            GIT_FILEMODE_TREE => FileMode::Tree,
+            GIT_FILEMODE_UNREADABLE => FileMode::Unreadable,
             _ => FileMode::Unknown,
         }
     }
@@ -28,13 +35,13 @@ impl From<u32> for FileMode {
 impl From<FileMode> for u32 {
     fn from(value: FileMode) -> Self {
         match value {
-            FileMode::Blob => libgit2_sys::GIT_FILEMODE_BLOB,
-            FileMode::BlobExecutable => libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE,
-            FileMode::Commit => libgit2_sys::GIT_FILEMODE_COMMIT,
-            FileMode::Link => libgit2_sys::GIT_FILEMODE_LINK,
-            FileMode::Tree => libgit2_sys::GIT_FILEMODE_TREE,
-            FileMode::Unreadable => libgit2_sys::GIT_FILEMODE_UNREADABLE,
-            FileMode::Unknown => libgit2_sys::GIT_FILEMODE_UNREADABLE,
+            FileMode::Blob => GIT_FILEMODE_BLOB,
+            FileMode::BlobExecutable => GIT_FILEMODE_BLOB_EXECUTABLE,
+            FileMode::Commit => GIT_FILEMODE_COMMIT,
+            FileMode::Link => GIT_FILEMODE_LINK,
+            FileMode::Tree => GIT_FILEMODE_TREE,
+            FileMode::Unreadable => GIT_FILEMODE_UNREADABLE,
+            FileMode::Unknown => GIT_FILEMODE_UNREADABLE,
         }
     }
 }

@@ -273,7 +273,6 @@ mod tests {
         env::{self, temp_dir},
         fs::{create_dir_all, File},
         io::Write,
-        os::unix::fs,
         path::Path,
         sync::Once,
     };
@@ -319,6 +318,7 @@ mod tests {
         file.write_all(content).unwrap();
     }
 
+    #[cfg(target_os = "linux")]
     fn add_symlink(repo: &Repository, link: &str, original: &str) {
         let workdir = repo.workdir().unwrap();
         let mut file_path = workdir.to_path_buf();
@@ -329,7 +329,7 @@ mod tests {
             create_dir_all(parent_dir.to_str().unwrap()).unwrap();
             env::set_current_dir(parent_dir).unwrap();
         }
-        fs::symlink(original, file_path.file_name().unwrap()).unwrap();
+        std::os::unix::fs::symlink(original, file_path.file_name().unwrap()).unwrap();
         env::set_current_dir(current_dir).unwrap();
     }
 
@@ -632,13 +632,18 @@ mod tests {
     // + original
     //   + README.txt
     #[test]
+    #[cfg(target_os = "linux")]
     fn has_symlink_single() {
         initialize();
 
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+        add_symlink(
+            &repo,
+            "linkdir/symlink",
+            "../original/README.txt",
+        );
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "linkdir";
 
@@ -671,6 +676,7 @@ mod tests {
     //   + README.txt
     //   + Sample.txt
     #[test]
+    #[cfg(target_os = "linux")]
     fn has_symlink_dir() {
         initialize();
 
