@@ -22,6 +22,10 @@ inputs:
     description: 'cache key'
     required: false
     default: ''
+  cache_restore-keys:
+    description: 'cache restore keys'
+    required: false
+    default: ''
   cache_path:
     description: 'cache path'
     required: false
@@ -56,6 +60,7 @@ runs:
       with:
         key: "${{ inputs.cache_key }}"
         path: "${{ inputs.cache_path }}"
+        restore-keys: "${{ inputs.cache_restore-keys }}"
 
     - name: execute
       if: ${{ steps.ci_result.outputs.exit_code != '0' }}
