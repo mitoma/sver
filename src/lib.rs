@@ -270,7 +270,7 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use std::{
-        env::{self, temp_dir},
+        env::temp_dir,
         fs::{create_dir_all, File},
         io::Write,
         path::Path,
@@ -324,13 +324,13 @@ mod tests {
         let mut file_path = workdir.to_path_buf();
         file_path.push(link);
 
-        let current_dir = env::current_dir().unwrap();
+        let current_dir = std::env::current_dir().unwrap();
         if let Some(parent_dir) = file_path.parent() {
             create_dir_all(parent_dir.to_str().unwrap()).unwrap();
-            env::set_current_dir(parent_dir).unwrap();
+            std::env::set_current_dir(parent_dir).unwrap();
         }
         std::os::unix::fs::symlink(original, file_path.file_name().unwrap()).unwrap();
-        env::set_current_dir(current_dir).unwrap();
+        std::env::set_current_dir(current_dir).unwrap();
     }
 
     fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -639,11 +639,7 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_symlink(
-            &repo,
-            "linkdir/symlink",
-            "../original/README.txt",
-        );
+        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "linkdir";
 
