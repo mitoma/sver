@@ -270,9 +270,10 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use std::{
-        env::temp_dir,
+        env::{self, temp_dir},
         fs::{create_dir_all, File},
         io::Write,
+        os::unix::fs,
         path::Path,
         sync::Once,
     };
@@ -306,7 +307,7 @@ mod tests {
         repo
     }
 
-    fn add_file(repo: &Repository, path: String, content: &[u8]) {
+    fn add_file(repo: &Repository, path: &str, content: &[u8]) {
         let workdir = repo.workdir().unwrap();
         let mut file_path = workdir.to_path_buf();
         file_path.push(&path);
@@ -316,6 +317,20 @@ mod tests {
         }
         let mut file = File::create(file_path).unwrap();
         file.write_all(content).unwrap();
+    }
+
+    fn add_symlink(repo: &Repository, link: &str, original: &str) {
+        let workdir = repo.workdir().unwrap();
+        let mut file_path = workdir.to_path_buf();
+        file_path.push(link);
+
+        let current_dir = env::current_dir().unwrap();
+        if let Some(parent_dir) = file_path.parent() {
+            create_dir_all(parent_dir.to_str().unwrap()).unwrap();
+            env::set_current_dir(parent_dir).unwrap();
+        }
+        fs::symlink(original, file_path.file_name().unwrap()).unwrap();
+        env::set_current_dir(current_dir).unwrap();
     }
 
     fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -366,12 +381,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt".into(), "hello world!".as_bytes());
-        add_file(
-            &repo,
-            "service1/world.txt".into(),
-            "good morning!".as_bytes(),
-        );
+        add_file(&repo, "hello.txt", "hello world!".as_bytes());
+        add_file(&repo, "service1/world.txt", "good morning!".as_bytes());
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "";
 
@@ -404,14 +415,10 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
+        add_file(&repo, "service1/hello.txt", "hello world!".as_bytes());
         add_file(
             &repo,
-            "service1/hello.txt".into(),
-            "hello world!".as_bytes(),
-        );
-        add_file(
-            &repo,
-            "service2/sver.toml".into(),
+            "service2/sver.toml",
             "
         [default]
         dependencies = [
@@ -453,7 +460,7 @@ mod tests {
         let repo = setup_test_repository();
         add_file(
             &repo,
-            "service1/sver.toml".into(),
+            "service1/sver.toml",
             "
         [default]
         dependencies = [
@@ -463,7 +470,7 @@ mod tests {
         );
         add_file(
             &repo,
-            "service2/sver.toml".into(),
+            "service2/sver.toml",
             "
         [default]
         dependencies = [
@@ -529,10 +536,10 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt".into(), "hello".as_bytes());
+        add_file(&repo, "hello.txt", "hello".as_bytes());
         add_file(
             &repo,
-            "sver.toml".into(),
+            "sver.toml",
             "
         [default]
         excludes = [
@@ -540,7 +547,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_file(&repo, "doc/README.txt".into(), "README".as_bytes());
+        add_file(&repo, "doc/README.txt", "README".as_bytes());
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "";
 
@@ -615,6 +622,44 @@ mod tests {
         assert_eq!(
             hash,
             "2600f60368549f186d7b48fe48765dbd57580cc416e91dc3fbca264d62d18f31"
+        );
+    }
+
+    // repo layout
+    // .
+    // + linkdir
+    //   + symlink → original/README.txt
+    // + original
+    //   + README.txt
+    #[test]
+    fn has_symlink_single() {
+        initialize();
+
+        // setup
+        let repo = setup_test_repository();
+        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+        add_and_commit(&repo, None, "setup").unwrap();
+        let target_path = "linkdir";
+
+        // exercise
+        let entries = list_sorted_entries(&repo, target_path).unwrap();
+        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+
+        // verify
+        assert_eq!(entries.len(), 2);
+
+        let mut iter = entries.iter();
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("linkdir/symlink".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Link);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/README.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+
+        assert_eq!(
+            hash,
+            "604b932c22dc969de21c8241ff46ea40f1a37d36050cc9d11345679389552d29"
         );
     }
 }
