@@ -4,7 +4,7 @@ mod sver_config;
 use std::{
     collections::{BTreeMap, HashMap},
     error::Error,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use self::filemode::FileMode;
@@ -104,7 +104,7 @@ fn calc_hash_string(
     for (path, oid_and_mode) in source {
         hasher.update(path);
         match oid_and_mode.mode {
-            FileMode::Blob => {
+            FileMode::Blob | FileMode::Link => {
                 // Q. Why little endian?
                 // A. no reason.
                 hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
@@ -209,17 +209,51 @@ fn collect_path_and_excludes(
     p.push(path);
     p.push("sver.toml");
 
+    let mut current_path_and_excludes: HashMap<String, Vec<String>> = HashMap::new();
+
     if let Some(entry) = repo.index()?.get_path(p.as_path(), 0) {
         debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
         let default_config =
             SverConfig::load_profile(repo.find_blob(entry.id)?.content(), "default")?;
+        current_path_and_excludes.insert(path.to_string(), default_config.excludes.clone());
         path_and_excludes.insert(path.to_string(), default_config.excludes);
-
         for dependency_path in default_config.dependencies {
             collect_path_and_excludes(repo, &dependency_path, path_and_excludes)?;
         }
     } else {
+        current_path_and_excludes.insert(path.to_string(), vec![]);
         path_and_excludes.insert(path.to_string(), vec![]);
+    }
+
+    // include synbolic link
+    for entry in repo.index()?.iter() {
+        let containable = containable(entry.path.as_slice(), &current_path_and_excludes);
+        if containable && FileMode::Link == FileMode::from(entry.mode) {
+            let path = String::from_utf8(entry.path)?;
+            let mut buf = PathBuf::new();
+            buf.push(path);
+            buf.pop();
+
+            let blob = repo.find_blob(entry.id)?;
+            let link_path = String::from_utf8(blob.content().to_vec())?;
+            let link_path = Path::new(&link_path);
+            for link_components in link_path.components() {
+                debug!("link_component:{:?}", link_components);
+                match link_components {
+                    Component::ParentDir => {
+                        buf.pop();
+                    }
+                    Component::Normal(path) => buf.push(path),
+                    Component::RootDir => {}
+                    Component::CurDir => {}
+                    Component::Prefix(_prefix) => {}
+                }
+            }
+
+            let link_path = buf.to_str().ok_or("path is invalid")?;
+            debug!("collect link path. path:{}", link_path);
+            collect_path_and_excludes(repo, link_path, path_and_excludes)?;
+        }
     }
     Ok(())
 }
@@ -236,9 +270,10 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use std::{
-        env::temp_dir,
+        env::{self, temp_dir},
         fs::{create_dir_all, File},
         io::Write,
+        os::unix::fs,
         path::Path,
         sync::Once,
     };
@@ -272,7 +307,7 @@ mod tests {
         repo
     }
 
-    fn add_file(repo: &Repository, path: String, content: &[u8]) {
+    fn add_file(repo: &Repository, path: &str, content: &[u8]) {
         let workdir = repo.workdir().unwrap();
         let mut file_path = workdir.to_path_buf();
         file_path.push(&path);
@@ -282,6 +317,20 @@ mod tests {
         }
         let mut file = File::create(file_path).unwrap();
         file.write_all(content).unwrap();
+    }
+
+    fn add_symlink(repo: &Repository, link: &str, original: &str) {
+        let workdir = repo.workdir().unwrap();
+        let mut file_path = workdir.to_path_buf();
+        file_path.push(link);
+
+        let current_dir = env::current_dir().unwrap();
+        if let Some(parent_dir) = file_path.parent() {
+            create_dir_all(parent_dir.to_str().unwrap()).unwrap();
+            env::set_current_dir(parent_dir).unwrap();
+        }
+        fs::symlink(original, file_path.file_name().unwrap()).unwrap();
+        env::set_current_dir(current_dir).unwrap();
     }
 
     fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -332,12 +381,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt".into(), "hello world!".as_bytes());
-        add_file(
-            &repo,
-            "service1/world.txt".into(),
-            "good morning!".as_bytes(),
-        );
+        add_file(&repo, "hello.txt", "hello world!".as_bytes());
+        add_file(&repo, "service1/world.txt", "good morning!".as_bytes());
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "";
 
@@ -370,14 +415,10 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
+        add_file(&repo, "service1/hello.txt", "hello world!".as_bytes());
         add_file(
             &repo,
-            "service1/hello.txt".into(),
-            "hello world!".as_bytes(),
-        );
-        add_file(
-            &repo,
-            "service2/sver.toml".into(),
+            "service2/sver.toml",
             "
         [default]
         dependencies = [
@@ -419,7 +460,7 @@ mod tests {
         let repo = setup_test_repository();
         add_file(
             &repo,
-            "service1/sver.toml".into(),
+            "service1/sver.toml",
             "
         [default]
         dependencies = [
@@ -429,7 +470,7 @@ mod tests {
         );
         add_file(
             &repo,
-            "service2/sver.toml".into(),
+            "service2/sver.toml",
             "
         [default]
         dependencies = [
@@ -495,10 +536,10 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt".into(), "hello".as_bytes());
+        add_file(&repo, "hello.txt", "hello".as_bytes());
         add_file(
             &repo,
-            "sver.toml".into(),
+            "sver.toml",
             "
         [default]
         excludes = [
@@ -506,7 +547,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_file(&repo, "doc/README.txt".into(), "README".as_bytes());
+        add_file(&repo, "doc/README.txt", "README".as_bytes());
         add_and_commit(&repo, None, "setup").unwrap();
         let target_path = "";
 
@@ -581,6 +622,87 @@ mod tests {
         assert_eq!(
             hash,
             "2600f60368549f186d7b48fe48765dbd57580cc416e91dc3fbca264d62d18f31"
+        );
+    }
+
+    // repo layout
+    // .
+    // + linkdir
+    //   + symlink → original/README.txt
+    // + original
+    //   + README.txt
+    #[test]
+    fn has_symlink_single() {
+        initialize();
+
+        // setup
+        let repo = setup_test_repository();
+        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+        add_and_commit(&repo, None, "setup").unwrap();
+        let target_path = "linkdir";
+
+        // exercise
+        let entries = list_sorted_entries(&repo, target_path).unwrap();
+        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+
+        // verify
+        assert_eq!(entries.len(), 2);
+
+        let mut iter = entries.iter();
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("linkdir/symlink".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Link);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/README.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+
+        assert_eq!(
+            hash,
+            "604b932c22dc969de21c8241ff46ea40f1a37d36050cc9d11345679389552d29"
+        );
+    }
+
+    // repo layout
+    // .
+    // + linkdir
+    //   + symlink → original/README.txt
+    // + original
+    //   + README.txt
+    //   + Sample.txt
+    #[test]
+    fn has_symlink_dir() {
+        initialize();
+
+        // setup
+        let repo = setup_test_repository();
+        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_file(&repo, "original/Sample.txt", "sample".as_bytes());
+        add_symlink(&repo, "linkdir/symlink", "../original");
+        add_and_commit(&repo, None, "setup").unwrap();
+        let target_path = "linkdir";
+
+        // exercise
+        let entries = list_sorted_entries(&repo, target_path).unwrap();
+        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+
+        // verify
+        assert_eq!(entries.len(), 3);
+
+        let mut iter = entries.iter();
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("linkdir/symlink".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Link);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/README.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/Sample.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+
+        assert_eq!(
+            hash,
+            "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
         );
     }
 }
