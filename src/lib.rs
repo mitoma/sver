@@ -662,4 +662,47 @@ mod tests {
             "604b932c22dc969de21c8241ff46ea40f1a37d36050cc9d11345679389552d29"
         );
     }
+
+    // repo layout
+    // .
+    // + linkdir
+    //   + symlink → original/README.txt
+    // + original
+    //   + README.txt
+    //   + Sample.txt
+    #[test]
+    fn has_symlink_dir() {
+        initialize();
+
+        // setup
+        let repo = setup_test_repository();
+        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_file(&repo, "original/Sample.txt", "sample".as_bytes());
+        add_symlink(&repo, "linkdir/symlink", "../original");
+        add_and_commit(&repo, None, "setup").unwrap();
+        let target_path = "linkdir";
+
+        // exercise
+        let entries = list_sorted_entries(&repo, target_path).unwrap();
+        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+
+        // verify
+        assert_eq!(entries.len(), 3);
+
+        let mut iter = entries.iter();
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("linkdir/symlink".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Link);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/README.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+        let (key, id) = iter.next().unwrap();
+        assert_eq!("original/Sample.txt".as_bytes(), key);
+        assert_eq!(id.mode, FileMode::Blob);
+
+        assert_eq!(
+            hash,
+            "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
+        );
+    }
 }
