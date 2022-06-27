@@ -278,7 +278,8 @@ mod tests {
     };
 
     use git2::{
-        build::CheckoutBuilder, Commit, IndexAddOption, ObjectType, Oid, Repository, Signature,
+        build::CheckoutBuilder, Commit, IndexAddOption, IndexEntry, IndexTime, ObjectType, Oid,
+        Repository, ResetType, Signature,
     };
     use log::debug;
     use uuid::Uuid;
@@ -318,19 +319,54 @@ mod tests {
         file.write_all(content).unwrap();
     }
 
-    #[cfg(target_os = "linux")]
-    fn add_symlink(repo: &Repository, link: &str, original: &str) {
-        let workdir = repo.workdir().unwrap();
-        let mut file_path = workdir.to_path_buf();
-        file_path.push(link);
+    fn add_symlink_and_commit(repo: &Repository, link: &str, original: &str, commit_message: &str) {
+        let mut index = repo.index().unwrap();
 
-        let current_dir = std::env::current_dir().unwrap();
-        if let Some(parent_dir) = file_path.parent() {
-            create_dir_all(parent_dir.to_str().unwrap()).unwrap();
-            std::env::set_current_dir(parent_dir).unwrap();
+        let blob = repo.blob(original.as_bytes()).unwrap();
+        let mut entry = entry();
+        entry.mode = FileMode::Link.into();
+        entry.id = blob;
+        entry.path = link.as_bytes().to_vec();
+        index.add(&entry).unwrap();
+        index.write().unwrap();
+        for entry in index.iter() {
+            println!("{}", String::from_utf8(entry.path).unwrap());
         }
-        std::os::unix::fs::symlink(original, file_path.file_name().unwrap()).unwrap();
-        std::env::set_current_dir(current_dir).unwrap();
+
+        let id = index.write_tree().unwrap();
+        let tree = repo.find_tree(id).unwrap();
+        let sig = repo.signature().unwrap();
+        let parent_id = repo.refname_to_id("HEAD").unwrap();
+        let parent_commit = repo.find_commit(parent_id).unwrap();
+        let commit = repo
+            .commit(
+                Some("HEAD"),
+                &sig,
+                &sig,
+                commit_message,
+                &tree,
+                &[&parent_commit],
+            )
+            .unwrap();
+        let obj = repo.find_object(commit, None).unwrap();
+        repo.reset(&obj, ResetType::Hard, None).unwrap();
+    }
+
+    fn entry() -> IndexEntry {
+        IndexEntry {
+            ctime: IndexTime::new(0, 0),
+            mtime: IndexTime::new(0, 0),
+            dev: 0,
+            ino: 0,
+            mode: 0o100644,
+            uid: 0,
+            gid: 0,
+            file_size: 0,
+            id: Oid::from_bytes(&[0; 20]).unwrap(),
+            flags: 0,
+            flags_extended: 0,
+            path: Vec::new(),
+        }
     }
 
     fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -632,15 +668,19 @@ mod tests {
     // + original
     //   + README.txt
     #[test]
-    #[cfg(target_os = "linux")]
     fn has_symlink_single() {
         initialize();
 
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
         add_and_commit(&repo, None, "setup").unwrap();
+        add_symlink_and_commit(
+            &repo,
+            "linkdir/symlink",
+            "../original/README.txt",
+            "add symlink",
+        );
         let target_path = "linkdir";
 
         // exercise
@@ -672,7 +712,6 @@ mod tests {
     //   + README.txt
     //   + Sample.txt
     #[test]
-    #[cfg(target_os = "linux")]
     fn has_symlink_dir() {
         initialize();
 
@@ -680,8 +719,8 @@ mod tests {
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
         add_file(&repo, "original/Sample.txt", "sample".as_bytes());
-        add_symlink(&repo, "linkdir/symlink", "../original");
         add_and_commit(&repo, None, "setup").unwrap();
+        add_symlink_and_commit(&repo, "linkdir/symlink", "../original", "add symlink");
         let target_path = "linkdir";
 
         // exercise
