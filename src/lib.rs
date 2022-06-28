@@ -166,7 +166,13 @@ fn list_sorted_entries(
     Ok(map)
 }
 
-const SEPARATOR: &[u8] = "/".as_bytes();
+#[cfg(target_os = "windows")]
+const OS_SEP_STR: &str = "\\";
+#[cfg(target_os = "linux")]
+const OS_SEP_STR: &str = "/";
+
+const SEPARATOR_STR: &str = "/";
+const SEPARATOR_BYTE: &[u8] = SEPARATOR_STR.as_bytes();
 
 fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> bool {
     path_set.iter().any(|(include, excludes)| {
@@ -177,7 +183,7 @@ fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> boo
             } else {
                 match_samefile_or_include_dir(
                     test_path,
-                    [include.as_bytes(), SEPARATOR, exclude.as_bytes()]
+                    [include.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
                         .concat()
                         .as_slice(),
                 )
@@ -190,7 +196,7 @@ fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> boo
 fn match_samefile_or_include_dir(test_path: &[u8], path: &[u8]) -> bool {
     let is_same_file = test_path == path;
     let is_contain_path =
-        path.is_empty() || test_path.starts_with([path, SEPARATOR].concat().as_slice());
+        path.is_empty() || test_path.starts_with([path, SEPARATOR_BYTE].concat().as_slice());
     is_same_file || is_contain_path
 }
 
@@ -250,9 +256,12 @@ fn collect_path_and_excludes(
                 }
             }
 
-            let link_path = buf.to_str().ok_or("path is invalid")?;
-            debug!("collect link path. path:{}", link_path);
-            collect_path_and_excludes(repo, link_path, path_and_excludes)?;
+            let link_path = buf
+                .to_str()
+                .ok_or("path is invalid")?
+                .replace(OS_SEP_STR, SEPARATOR_STR);
+            debug!("collect link path. path:{}", &link_path);
+            collect_path_and_excludes(repo, &link_path, path_and_excludes)?;
         }
     }
     Ok(())
