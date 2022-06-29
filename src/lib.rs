@@ -166,7 +166,13 @@ fn list_sorted_entries(
     Ok(map)
 }
 
-const SEPARATOR: &[u8] = "/".as_bytes();
+#[cfg(target_os = "windows")]
+const OS_SEP_STR: &str = "\\";
+#[cfg(target_os = "linux")]
+const OS_SEP_STR: &str = "/";
+
+const SEPARATOR_STR: &str = "/";
+const SEPARATOR_BYTE: &[u8] = SEPARATOR_STR.as_bytes();
 
 fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> bool {
     path_set.iter().any(|(include, excludes)| {
@@ -177,7 +183,7 @@ fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> boo
             } else {
                 match_samefile_or_include_dir(
                     test_path,
-                    [include.as_bytes(), SEPARATOR, exclude.as_bytes()]
+                    [include.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
                         .concat()
                         .as_slice(),
                 )
@@ -190,7 +196,7 @@ fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> boo
 fn match_samefile_or_include_dir(test_path: &[u8], path: &[u8]) -> bool {
     let is_same_file = test_path == path;
     let is_contain_path =
-        path.is_empty() || test_path.starts_with([path, SEPARATOR].concat().as_slice());
+        path.is_empty() || test_path.starts_with([path, SEPARATOR_BYTE].concat().as_slice());
     is_same_file || is_contain_path
 }
 
@@ -250,9 +256,12 @@ fn collect_path_and_excludes(
                 }
             }
 
-            let link_path = buf.to_str().ok_or("path is invalid")?;
-            debug!("collect link path. path:{}", link_path);
-            collect_path_and_excludes(repo, link_path, path_and_excludes)?;
+            let link_path = buf
+                .to_str()
+                .ok_or("path is invalid")?
+                .replace(OS_SEP_STR, SEPARATOR_STR);
+            debug!("collect link path. path:{}", &link_path);
+            collect_path_and_excludes(repo, &link_path, path_and_excludes)?;
         }
     }
     Ok(())
@@ -278,7 +287,8 @@ mod tests {
     };
 
     use git2::{
-        build::CheckoutBuilder, Commit, IndexAddOption, ObjectType, Oid, Repository, Signature,
+        build::CheckoutBuilder, Commit, IndexAddOption, IndexEntry, IndexTime, ObjectType, Oid,
+        Repository, ResetType, Signature,
     };
     use log::debug;
     use uuid::Uuid;
@@ -318,19 +328,51 @@ mod tests {
         file.write_all(content).unwrap();
     }
 
-    #[cfg(target_os = "linux")]
-    fn add_symlink(repo: &Repository, link: &str, original: &str) {
-        let workdir = repo.workdir().unwrap();
-        let mut file_path = workdir.to_path_buf();
-        file_path.push(link);
+    fn add_symlink_and_commit(repo: &Repository, link: &str, original: &str, commit_message: &str) {
+        let mut index = repo.index().unwrap();
 
-        let current_dir = std::env::current_dir().unwrap();
-        if let Some(parent_dir) = file_path.parent() {
-            create_dir_all(parent_dir.to_str().unwrap()).unwrap();
-            std::env::set_current_dir(parent_dir).unwrap();
+        let blob = repo.blob(original.as_bytes()).unwrap();
+        let mut entry = entry();
+        entry.mode = FileMode::Link.into();
+        entry.id = blob;
+        entry.path = link.as_bytes().to_vec();
+        index.add(&entry).unwrap();
+        index.write().unwrap();
+
+        let id = index.write_tree().unwrap();
+        let tree = repo.find_tree(id).unwrap();
+        let signature = Signature::now("sver tester", "tester@example.com").unwrap();
+        let parent_id = repo.refname_to_id("HEAD").unwrap();
+        let parent_commit = repo.find_commit(parent_id).unwrap();
+        let commit = repo
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                commit_message,
+                &tree,
+                &[&parent_commit],
+            )
+            .unwrap();
+        let obj = repo.find_object(commit, None).unwrap();
+        repo.reset(&obj, ResetType::Hard, None).unwrap();
+    }
+
+    fn entry() -> IndexEntry {
+        IndexEntry {
+            ctime: IndexTime::new(0, 0),
+            mtime: IndexTime::new(0, 0),
+            dev: 0,
+            ino: 0,
+            mode: 0o100644,
+            uid: 0,
+            gid: 0,
+            file_size: 0,
+            id: Oid::from_bytes(&[0; 20]).unwrap(),
+            flags: 0,
+            flags_extended: 0,
+            path: Vec::new(),
         }
-        std::os::unix::fs::symlink(original, file_path.file_name().unwrap()).unwrap();
-        std::env::set_current_dir(current_dir).unwrap();
     }
 
     fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
@@ -632,15 +674,19 @@ mod tests {
     // + original
     //   + README.txt
     #[test]
-    #[cfg(target_os = "linux")]
     fn has_symlink_single() {
         initialize();
 
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
         add_and_commit(&repo, None, "setup").unwrap();
+        add_symlink_and_commit(
+            &repo,
+            "linkdir/symlink",
+            "../original/README.txt",
+            "add symlink",
+        );
         let target_path = "linkdir";
 
         // exercise
@@ -672,7 +718,6 @@ mod tests {
     //   + README.txt
     //   + Sample.txt
     #[test]
-    #[cfg(target_os = "linux")]
     fn has_symlink_dir() {
         initialize();
 
@@ -680,8 +725,8 @@ mod tests {
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
         add_file(&repo, "original/Sample.txt", "sample".as_bytes());
-        add_symlink(&repo, "linkdir/symlink", "../original");
         add_and_commit(&repo, None, "setup").unwrap();
+        add_symlink_and_commit(&repo, "linkdir/symlink", "../original", "add symlink");
         let target_path = "linkdir";
 
         // exercise
