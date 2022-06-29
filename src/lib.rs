@@ -338,9 +338,6 @@ mod tests {
         entry.path = link.as_bytes().to_vec();
         index.add(&entry).unwrap();
         index.write().unwrap();
-        for entry in index.iter() {
-            println!("{}", String::from_utf8(entry.path).unwrap());
-        }
 
         let id = index.write_tree().unwrap();
         let tree = repo.find_tree(id).unwrap();
