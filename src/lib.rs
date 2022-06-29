@@ -13,6 +13,28 @@ use git2::{Oid, Repository};
 use log::debug;
 use sha2::{Digest, Sha256};
 
+pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
+    debug!("path:{}", path);
+    let ResolvePathResult {
+        repo, target_path, ..
+    } = resolve_target_repo_and_path(path)?;
+    let mut path_buf = PathBuf::new();
+    path_buf.push(target_path);
+    path_buf.push("sver.toml");
+    let config_path = path_buf.as_path();
+
+    if repo.index()?.get_path(config_path, 0).is_some() {
+        return Ok("sver.toml is already exists".into());
+    }
+    if !SverConfig::write_initial_config(config_path)? {
+        return Ok(format!(
+            "sver.toml is already exists. but not commited. path:{}",
+            path
+        ));
+    }
+    Ok(format!("sver.toml is generated. path:{}", path))
+}
+
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
     let ResolvePathResult {
         repo, target_path, ..
