@@ -335,14 +335,14 @@ mod tests {
 
         let id = index.write_tree().unwrap();
         let tree = repo.find_tree(id).unwrap();
-        let sig = repo.signature().unwrap();
+        let signature = Signature::now("sver tester", "tester@example.com").unwrap();
         let parent_id = repo.refname_to_id("HEAD").unwrap();
         let parent_commit = repo.find_commit(parent_id).unwrap();
         let commit = repo
             .commit(
                 Some("HEAD"),
-                &sig,
-                &sig,
+                &signature,
+                &signature,
                 commit_message,
                 &tree,
                 &[&parent_commit],
