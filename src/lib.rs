@@ -300,18 +300,9 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        env::temp_dir,
-        fs::{create_dir_all, File},
-        io::Write,
-        path::Path,
-        sync::Once,
-    };
+    use std::{env::temp_dir, path::Path, sync::Once};
 
-    use git2::{
-        build::CheckoutBuilder, Commit, IndexAddOption, IndexEntry, IndexTime, ObjectType, Oid,
-        Repository, ResetType, Signature,
-    };
+    use git2::{Commit, IndexEntry, IndexTime, Oid, Repository, ResetType, Signature};
     use log::debug;
     use uuid::Uuid;
 
@@ -338,19 +329,20 @@ mod tests {
         repo
     }
 
-    fn add_file(repo: &Repository, path: &str, content: &[u8]) {
-        let workdir = repo.workdir().unwrap();
-        let mut file_path = workdir.to_path_buf();
-        file_path.push(&path);
+    fn add_file(repo: &Repository, path: &str, content: &[u8]) -> Oid {
+        let mut index = repo.index().unwrap();
 
-        if let Some(parent_dir) = file_path.parent() {
-            create_dir_all(parent_dir.to_str().unwrap()).unwrap();
-        }
-        let mut file = File::create(file_path).unwrap();
-        file.write_all(content).unwrap();
+        let blob = repo.blob(content).unwrap();
+        let mut entry = entry();
+        entry.mode = FileMode::Blob.into();
+        entry.id = blob;
+        entry.path = path.as_bytes().to_vec();
+        index.add(&entry).unwrap();
+        index.write().unwrap();
+        index.write_tree().unwrap()
     }
 
-    fn add_symlink_and_commit(repo: &Repository, link: &str, original: &str, commit_message: &str) {
+    fn add_symlink(repo: &Repository, link: &str, original: &str) -> Oid {
         let mut index = repo.index().unwrap();
 
         let blob = repo.blob(original.as_bytes()).unwrap();
@@ -360,12 +352,35 @@ mod tests {
         entry.path = link.as_bytes().to_vec();
         index.add(&entry).unwrap();
         index.write().unwrap();
+        index.write_tree().unwrap()
+    }
 
-        let id = index.write_tree().unwrap();
+    fn add_submodule(
+        repo: &mut Repository,
+        external_repo_url: &str,
+        path: &str,
+        commit_hash: &str,
+    ) -> Oid {
+        let path_obj = Path::new(path);
+        let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
+        submodule.clone(None).unwrap();
+        submodule.add_finalize().unwrap();
+        let submodule_repo = submodule.open().unwrap();
+        submodule_repo
+            .set_head_detached(Oid::from_str(commit_hash).unwrap())
+            .unwrap();
+        repo.index().unwrap().write_tree().unwrap()
+    }
+
+    fn commit(repo: &Repository, id: Oid, commit_message: &str) {
         let tree = repo.find_tree(id).unwrap();
         let signature = Signature::now("sver tester", "tester@example.com").unwrap();
-        let parent_id = repo.refname_to_id("HEAD").unwrap();
-        let parent_commit = repo.find_commit(parent_id).unwrap();
+        let mut parents = Vec::new();
+        if let Ok(parent_id) = repo.refname_to_id("HEAD") {
+            let parent_commit = repo.find_commit(parent_id).unwrap();
+            parents.push(parent_commit);
+        }
+
         let commit = repo
             .commit(
                 Some("HEAD"),
@@ -373,7 +388,7 @@ mod tests {
                 &signature,
                 commit_message,
                 &tree,
-                &[&parent_commit],
+                parents.iter().collect::<Vec<&Commit>>().as_slice(),
             )
             .unwrap();
         let obj = repo.find_object(commit, None).unwrap();
@@ -397,44 +412,6 @@ mod tests {
         }
     }
 
-    fn find_last_commit(repo: &Repository) -> Result<Commit, git2::Error> {
-        let obj = repo.head()?.resolve()?.peel(ObjectType::Commit)?;
-        obj.into_commit()
-            .map_err(|_| git2::Error::from_str("Couldn't find commit"))
-    }
-
-    fn add_and_commit(
-        repo: &Repository,
-        path: Option<&Path>,
-        message: &str,
-    ) -> Result<(), git2::Error> {
-        let mut index = repo.index()?;
-        if let Some(path) = path {
-            index.add_path(path)?;
-        } else {
-            index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
-        }
-
-        let oid = index.write_tree()?;
-        let signature = Signature::now("sver tester", "tester@example.com")?;
-        let last_commit = find_last_commit(&repo).ok();
-
-        let tree = repo.find_tree(oid)?;
-        if let Some(parent_commit) = last_commit {
-            repo.commit(
-                Some("HEAD"),
-                &signature,
-                &signature,
-                message,
-                &tree,
-                &[&parent_commit],
-            )?
-        } else {
-            repo.commit(Some("HEAD"), &signature, &signature, message, &tree, &[])?
-        };
-        repo.checkout_head(Some(CheckoutBuilder::new().force()))
-    }
-
     // repo layout
     // .
     // + hello.txt
@@ -446,8 +423,8 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "hello.txt", "hello world!".as_bytes());
-        add_file(&repo, "service1/world.txt", "good morning!".as_bytes());
-        add_and_commit(&repo, None, "setup").unwrap();
+        let id = add_file(&repo, "service1/world.txt", "good morning!".as_bytes());
+        commit(&repo, id, "setup");
         let target_path = "";
 
         // exercise
@@ -480,7 +457,7 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "service1/hello.txt", "hello world!".as_bytes());
-        add_file(
+        let oid = add_file(
             &repo,
             "service2/sver.toml",
             "
@@ -490,7 +467,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_and_commit(&repo, None, "setup").unwrap();
+        commit(&repo, oid, "setup");
         let target_path = "service2";
 
         // exercise
@@ -532,7 +509,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_file(
+        let oid = add_file(
             &repo,
             "service2/sver.toml",
             "
@@ -542,7 +519,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_and_commit(&repo, None, "setup").unwrap();
+        commit(&repo, oid, "setup");
 
         {
             let target_path = "service1";
@@ -611,8 +588,8 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        add_file(&repo, "doc/README.txt", "README".as_bytes());
-        add_and_commit(&repo, None, "setup").unwrap();
+        let oid = add_file(&repo, "doc/README.txt", "README".as_bytes());
+        commit(&repo, oid, "setup");
         let target_path = "";
 
         // exercise
@@ -634,22 +611,6 @@ mod tests {
         );
     }
 
-    fn add_submodule(
-        repo: &mut Repository,
-        external_repo_url: &str,
-        path: &str,
-        commit_hash: &str,
-    ) {
-        let path_obj = Path::new(path);
-        let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
-        submodule.clone(None).unwrap();
-        submodule.add_finalize().unwrap();
-        let submodule_repo = submodule.open().unwrap();
-        submodule_repo
-            .set_head_detached(Oid::from_str(commit_hash).unwrap())
-            .unwrap();
-    }
-
     // repo layout
     // .
     // + bano → submodule https://github.com/mitoma/bano ec3774f3ad6abb46344cab9662a569a2f8231642
@@ -659,14 +620,14 @@ mod tests {
 
         // setup
         let mut repo = setup_test_repository();
-        add_submodule(
+        let oid = add_submodule(
             &mut repo,
             "https://github.com/mitoma/bano",
             "bano",
             "ec3774f3ad6abb46344cab9662a569a2f8231642",
         );
 
-        add_and_commit(&repo, None, "setup").unwrap();
+        commit(&repo, oid, "setup");
         let target_path = "";
 
         // exercise
@@ -702,13 +663,8 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_and_commit(&repo, None, "setup").unwrap();
-        add_symlink_and_commit(
-            &repo,
-            "linkdir/symlink",
-            "../original/README.txt",
-            "add symlink",
-        );
+        let oid = add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+        commit(&repo, oid, "setup");
         let target_path = "linkdir";
 
         // exercise
@@ -747,8 +703,9 @@ mod tests {
         let repo = setup_test_repository();
         add_file(&repo, "original/README.txt", "hello.world".as_bytes());
         add_file(&repo, "original/Sample.txt", "sample".as_bytes());
-        add_and_commit(&repo, None, "setup").unwrap();
-        add_symlink_and_commit(&repo, "linkdir/symlink", "../original", "add symlink");
+
+        let oid = add_symlink(&repo, "linkdir/symlink", "../original");
+        commit(&repo, oid, "setup");
         let target_path = "linkdir";
 
         // exercise
