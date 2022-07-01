@@ -306,12 +306,15 @@ mod tests {
     use log::debug;
     use uuid::Uuid;
 
-    use crate::{calc_hash_string, filemode::FileMode, list_sorted_entries};
+    use crate::{
+        calc_hash_string, calc_version, filemode::FileMode, list_sorted_entries, list_sources,
+    };
 
     static INIT: Once = Once::new();
 
     pub fn initialize() {
         INIT.call_once(|| {
+            std::env::set_var("RUST_LOG", "debug");
             env_logger::init();
         });
     }
@@ -329,7 +332,7 @@ mod tests {
         repo
     }
 
-    fn add_file(repo: &Repository, path: &str, content: &[u8], mode: FileMode) -> Oid {
+    fn add_file(repo: &Repository, path: &str, content: &[u8], mode: FileMode) {
         let mut index = repo.index().unwrap();
 
         let blob = repo.blob(content).unwrap();
@@ -339,14 +342,13 @@ mod tests {
         entry.path = path.as_bytes().to_vec();
         index.add(&entry).unwrap();
         index.write().unwrap();
-        index.write_tree().unwrap()
     }
 
-    fn add_blog(repo: &Repository, path: &str, content: &[u8]) -> Oid {
+    fn add_blog(repo: &Repository, path: &str, content: &[u8]) {
         add_file(repo, path, content, FileMode::Blob)
     }
 
-    fn add_symlink(repo: &Repository, link: &str, original: &str) -> Oid {
+    fn add_symlink(repo: &Repository, link: &str, original: &str) {
         add_file(repo, link, original.as_bytes(), FileMode::Link)
     }
 
@@ -355,7 +357,7 @@ mod tests {
         external_repo_url: &str,
         path: &str,
         commit_hash: &str,
-    ) -> Oid {
+    ) {
         let path_obj = Path::new(path);
         let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
         submodule.clone(None).unwrap();
@@ -364,10 +366,10 @@ mod tests {
         submodule_repo
             .set_head_detached(Oid::from_str(commit_hash).unwrap())
             .unwrap();
-        repo.index().unwrap().write_tree().unwrap()
     }
 
-    fn commit(repo: &Repository, id: Oid, commit_message: &str) {
+    fn commit(repo: &Repository, commit_message: &str) {
+        let id = repo.index().unwrap().write_tree().unwrap();
         let tree = repo.find_tree(id).unwrap();
         let signature = Signature::now("sver tester", "tester@example.com").unwrap();
         let mut parents = Vec::new();
@@ -418,25 +420,18 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_blog(&repo, "hello.txt", "hello world!".as_bytes());
-        let id = add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
-        commit(&repo, id, "setup");
-        let target_path = "";
+        add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+        commit(&repo, "setup");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let repo_path = repo.workdir().unwrap().to_str().unwrap();
+        let sources = list_sources(repo_path).unwrap();
+        let version = calc_version(repo_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 2);
-
-        let mut iter = entries.iter();
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("hello.txt".as_bytes(), key);
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("service1/world.txt".as_bytes(), key);
-
+        assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
         assert_eq!(
-            hash,
+            version.version,
             "c7eacf9aee8ced0b9131dce96c2e2077e2c683a7d39342c8c13b32fefac5662a"
         );
     }
@@ -452,7 +447,7 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-        let oid = add_blog(
+        add_blog(
             &repo,
             "service2/sver.toml",
             "
@@ -462,7 +457,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        commit(&repo, oid, "setup");
+        commit(&repo, "setup");
         let target_path = "service2";
 
         // exercise
@@ -504,7 +499,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        let oid = add_blog(
+        add_blog(
             &repo,
             "service2/sver.toml",
             "
@@ -514,7 +509,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        commit(&repo, oid, "setup");
+        commit(&repo, "setup");
 
         {
             let target_path = "service1";
@@ -583,8 +578,8 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        let oid = add_blog(&repo, "doc/README.txt", "README".as_bytes());
-        commit(&repo, oid, "setup");
+        add_blog(&repo, "doc/README.txt", "README".as_bytes());
+        commit(&repo, "setup");
         let target_path = "";
 
         // exercise
@@ -615,14 +610,14 @@ mod tests {
 
         // setup
         let mut repo = setup_test_repository();
-        let oid = add_submodule(
+        add_submodule(
             &mut repo,
             "https://github.com/mitoma/bano",
             "bano",
             "ec3774f3ad6abb46344cab9662a569a2f8231642",
         );
 
-        commit(&repo, oid, "setup");
+        commit(&repo, "setup");
         let target_path = "";
 
         // exercise
@@ -658,8 +653,8 @@ mod tests {
         // setup
         let repo = setup_test_repository();
         add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
-        let oid = add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
-        commit(&repo, oid, "setup");
+        add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+        commit(&repo, "setup");
         let target_path = "linkdir";
 
         // exercise
@@ -699,8 +694,8 @@ mod tests {
         add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
         add_blog(&repo, "original/Sample.txt", "sample".as_bytes());
 
-        let oid = add_symlink(&repo, "linkdir/symlink", "../original");
-        commit(&repo, oid, "setup");
+        add_symlink(&repo, "linkdir/symlink", "../original");
+        commit(&repo, "setup");
         let target_path = "linkdir";
 
         // exercise
