@@ -329,12 +329,12 @@ mod tests {
         repo
     }
 
-    fn add_file(repo: &Repository, path: &str, content: &[u8]) -> Oid {
+    fn add_file(repo: &Repository, path: &str, content: &[u8], mode: FileMode) -> Oid {
         let mut index = repo.index().unwrap();
 
         let blob = repo.blob(content).unwrap();
         let mut entry = entry();
-        entry.mode = FileMode::Blob.into();
+        entry.mode = mode.into();
         entry.id = blob;
         entry.path = path.as_bytes().to_vec();
         index.add(&entry).unwrap();
@@ -342,17 +342,12 @@ mod tests {
         index.write_tree().unwrap()
     }
 
-    fn add_symlink(repo: &Repository, link: &str, original: &str) -> Oid {
-        let mut index = repo.index().unwrap();
+    fn add_blog(repo: &Repository, path: &str, content: &[u8]) -> Oid {
+        add_file(repo, path, content, FileMode::Blob)
+    }
 
-        let blob = repo.blob(original.as_bytes()).unwrap();
-        let mut entry = entry();
-        entry.mode = FileMode::Link.into();
-        entry.id = blob;
-        entry.path = link.as_bytes().to_vec();
-        index.add(&entry).unwrap();
-        index.write().unwrap();
-        index.write_tree().unwrap()
+    fn add_symlink(repo: &Repository, link: &str, original: &str) -> Oid {
+        add_file(repo, link, original.as_bytes(), FileMode::Link)
     }
 
     fn add_submodule(
@@ -422,8 +417,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt", "hello world!".as_bytes());
-        let id = add_file(&repo, "service1/world.txt", "good morning!".as_bytes());
+        add_blog(&repo, "hello.txt", "hello world!".as_bytes());
+        let id = add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
         commit(&repo, id, "setup");
         let target_path = "";
 
@@ -456,8 +451,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "service1/hello.txt", "hello world!".as_bytes());
-        let oid = add_file(
+        add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
+        let oid = add_blog(
             &repo,
             "service2/sver.toml",
             "
@@ -499,7 +494,7 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(
+        add_blog(
             &repo,
             "service1/sver.toml",
             "
@@ -509,7 +504,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        let oid = add_file(
+        let oid = add_blog(
             &repo,
             "service2/sver.toml",
             "
@@ -577,8 +572,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "hello.txt", "hello".as_bytes());
-        add_file(
+        add_blog(&repo, "hello.txt", "hello".as_bytes());
+        add_blog(
             &repo,
             "sver.toml",
             "
@@ -588,7 +583,7 @@ mod tests {
         ]"
             .as_bytes(),
         );
-        let oid = add_file(&repo, "doc/README.txt", "README".as_bytes());
+        let oid = add_blog(&repo, "doc/README.txt", "README".as_bytes());
         commit(&repo, oid, "setup");
         let target_path = "";
 
@@ -662,7 +657,7 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
         let oid = add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
         commit(&repo, oid, "setup");
         let target_path = "linkdir";
@@ -701,8 +696,8 @@ mod tests {
 
         // setup
         let repo = setup_test_repository();
-        add_file(&repo, "original/README.txt", "hello.world".as_bytes());
-        add_file(&repo, "original/Sample.txt", "sample".as_bytes());
+        add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
+        add_blog(&repo, "original/Sample.txt", "sample".as_bytes());
 
         let oid = add_symlink(&repo, "linkdir/symlink", "../original");
         commit(&repo, oid, "setup");
