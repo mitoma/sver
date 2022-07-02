@@ -35,6 +35,30 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("sver.toml is generated. path:{}", path))
 }
 
+pub fn verify_sver_config() -> Result<(), Box<dyn Error>> {
+    let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(".")?;
+    let configs = SverConfig::load_all_configs(&repo)?;
+    configs.keys().for_each(|key| debug!("{}", key));
+    configs.iter().for_each(|(config_file, sver_config)| {
+        sver_config.iter().for_each(|(profile, config)| {
+            let path = if let Some(parent) = Path::new(config_file).parent() {
+                parent.to_str().ok_or("invalid path name").unwrap()
+            } else {
+                ""
+            };
+
+            let result = config.verify(path, &repo).unwrap();
+            println!(
+                "path:{}, profile:{}, is_valid:{}",
+                config_file,
+                profile,
+                result.is_none(),
+            );
+        });
+    });
+    Ok(())
+}
+
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {
     let ResolvePathResult {
         repo, target_path, ..

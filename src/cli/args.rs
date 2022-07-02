@@ -32,6 +32,9 @@ pub(crate) enum Commands {
         #[clap(default_value = ".")]
         path: String,
     },
+
+    /// verify all config files in repository
+    Verify,
 }
 
 #[derive(Debug, Clone, clap::ArgEnum)]

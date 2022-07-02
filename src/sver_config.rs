@@ -1,7 +1,11 @@
 // sver.toml ファイルの操作を扱うモジュール
 use std::{collections::BTreeMap, error::Error, fs::File, io::Write, path::Path};
 
+use git2::Repository;
+use log::debug;
 use serde::{Deserialize, Serialize};
+
+use crate::{match_samefile_or_include_dir, SEPARATOR_BYTE};
 
 #[derive(Serialize, Deserialize, Clone, Default)]
 pub(crate) struct SverConfig {
@@ -9,6 +13,18 @@ pub(crate) struct SverConfig {
     pub(crate) excludes: Vec<String>,
     #[serde(default)]
     pub(crate) dependencies: Vec<String>,
+}
+
+#[derive(Default)]
+pub(crate) struct VerifyResult {
+    invalid_excludes: Vec<String>,
+    invalid_dependencies: Vec<String>,
+}
+
+impl VerifyResult {
+    fn is_empty(&self) -> bool {
+        self.invalid_dependencies.is_empty() && self.invalid_excludes.is_empty()
+    }
 }
 
 impl SverConfig {
@@ -32,5 +48,67 @@ impl SverConfig {
         file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
         file.flush()?;
         Ok(true)
+    }
+
+    pub(crate) fn load_all_configs(
+        repo: &Repository,
+    ) -> Result<BTreeMap<String, BTreeMap<String, SverConfig>>, Box<dyn Error>> {
+        let mut result = BTreeMap::new();
+        for entry in repo.index()?.iter() {
+            let is_sver_config_in_root_directory = entry.path == "sver.toml".as_bytes();
+            let is_sver_config_in_sub_directory = entry
+                .path
+                .ends_with([SEPARATOR_BYTE, "sver.toml".as_bytes()].concat().as_slice());
+            debug!(
+                "path:{}, is_root:{}, is_sub:{}",
+                String::from_utf8(entry.path.clone())?,
+                is_sver_config_in_root_directory,
+                is_sver_config_in_sub_directory
+            );
+            if is_sver_config_in_root_directory || is_sver_config_in_sub_directory {
+                debug!("load sver. path:{}", String::from_utf8(entry.path.clone())?);
+
+                let blob = repo.find_blob(entry.id)?;
+
+                debug!("content:{}", String::from_utf8(blob.content().to_vec())?);
+
+                let config = toml::from_slice::<BTreeMap<String, SverConfig>>(blob.content())?;
+                result.insert(String::from_utf8(entry.path)?, config);
+            }
+        }
+        Ok(result)
+    }
+
+    pub(crate) fn verify(
+        &self,
+        path: &str,
+        repo: &Repository,
+    ) -> Result<Option<VerifyResult>, Box<dyn Error>> {
+        let mut result = VerifyResult::default();
+
+        result
+            .invalid_dependencies
+            .extend(self.dependencies.clone());
+        result.invalid_excludes.extend(self.excludes.clone());
+
+        for entry in repo.index()?.iter() {
+            result.invalid_dependencies.retain(|dependency| {
+                match_samefile_or_include_dir(&entry.path, dependency.as_bytes())
+            });
+            result.invalid_excludes.retain(|exclude| {
+                match_samefile_or_include_dir(
+                    &entry.path,
+                    [path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
+                        .concat()
+                        .as_slice(),
+                )
+            });
+        }
+
+        if result.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(result))
+        }
     }
 }

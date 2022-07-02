@@ -7,7 +7,7 @@ use crate::cli::outputs::format_versions;
 use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
 use log::debug;
-use sver::{calc_version, init_sver_config, list_sources, Version};
+use sver::{calc_version, init_sver_config, list_sources, Version, verify_sver_config};
 
 fn main() -> ExitCode {
     env_logger::init();
@@ -21,6 +21,7 @@ fn main() -> ExitCode {
         } => calc(paths, output, length),
         Commands::List { path } => list(&path),
         Commands::Init { path } => init(&path),
+        Commands::Verify => verify(),
     };
     match result {
         Ok(_) => ExitCode::SUCCESS,
@@ -57,5 +58,10 @@ fn list(path: &str) -> Result<(), Box<dyn Error>> {
 
 fn init(path: &str) -> Result<(), Box<dyn Error>> {
     println!("{}", init_sver_config(path)?);
+    Ok(())
+}
+
+fn verify() -> Result<(), Box<dyn Error>> {
+    verify_sver_config()?;
     Ok(())
 }
