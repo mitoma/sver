@@ -47,13 +47,13 @@ pub fn verify_sver_config() -> Result<(), Box<dyn Error>> {
                 ""
             };
 
-            let result = config.verify(path, &repo).unwrap();
-            println!(
-                "path:{}, profile:{}, is_valid:{}",
-                config_file,
-                profile,
-                result.is_none(),
-            );
+            if let Some(result) = config.verify(path, &repo).unwrap() {
+                println!("[NG]\t{}:{}", config_file, profile);
+                println!("\tinvalid_dependency:{:?}", result.invalid_dependencies);
+                println!("\tinvalid_exclude:{:?}", result.invalid_excludes);
+            } else {
+                println!("[OK]\t{}:[{}]", config_file, profile,);
+            }
         });
     });
     Ok(())

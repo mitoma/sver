@@ -15,10 +15,10 @@ pub(crate) struct SverConfig {
     pub(crate) dependencies: Vec<String>,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub(crate) struct VerifyResult {
-    invalid_excludes: Vec<String>,
-    invalid_dependencies: Vec<String>,
+    pub(crate) invalid_excludes: Vec<String>,
+    pub(crate) invalid_dependencies: Vec<String>,
 }
 
 impl VerifyResult {
@@ -93,17 +93,28 @@ impl SverConfig {
 
         for entry in repo.index()?.iter() {
             result.invalid_dependencies.retain(|dependency| {
-                match_samefile_or_include_dir(&entry.path, dependency.as_bytes())
+                !match_samefile_or_include_dir(&entry.path, dependency.as_bytes())
             });
             result.invalid_excludes.retain(|exclude| {
-                match_samefile_or_include_dir(
-                    &entry.path,
-                    [path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
-                        .concat()
-                        .as_slice(),
-                )
+                let normalized_path = if path.is_empty() {
+                    exclude.as_bytes().to_vec()
+                } else {
+                    [path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()].concat()
+                };
+
+                let is_match = match_samefile_or_include_dir(&entry.path, &normalized_path);
+
+                debug!(
+                    "exclude {}, {}, match:{}",
+                    String::from_utf8(entry.path.clone().to_vec()).unwrap(),
+                    String::from_utf8(normalized_path).unwrap(),
+                    is_match,
+                );
+                !is_match
             });
         }
+
+        debug!("path:{}, verify_result:{:?}", path, result);
 
         if result.is_empty() {
             Ok(None)
