@@ -35,28 +35,37 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("sver.toml is generated. path:{}", path))
 }
 
-pub fn verify_sver_config() -> Result<(), Box<dyn Error>> {
+pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
     let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(".")?;
     let configs = SverConfig::load_all_configs(&repo)?;
     configs.keys().for_each(|key| debug!("{}", key));
-    configs.iter().for_each(|(config_file, sver_config)| {
-        sver_config.iter().for_each(|(profile, config)| {
-            let path = if let Some(parent) = Path::new(config_file).parent() {
-                parent.to_str().ok_or("invalid path name").unwrap()
-            } else {
-                ""
-            };
-
-            if let Some(result) = config.verify(path, &repo).unwrap() {
-                println!("[NG]\t{}:{}", config_file, profile);
-                println!("\tinvalid_dependency:{:?}", result.invalid_dependencies);
-                println!("\tinvalid_exclude:{:?}", result.invalid_excludes);
-            } else {
-                println!("[OK]\t{}:[{}]", config_file, profile,);
-            }
-        });
-    });
-    Ok(())
+    let result: Vec<String> = configs
+        .iter()
+        .flat_map(|(target_path, sver_config)| {
+            sver_config
+                .iter()
+                .map(|(profile, config)| {
+                    let path = if target_path == "" { "" } else { target_path };
+                    if let Some(result) = config.verify(path, &repo).unwrap() {
+                        let mut result_str = String::new();
+                        result_str.push_str(&format!("[NG]\t{}/sver.toml:{}\n", target_path, profile));
+                        result_str.push_str(&format!(
+                            "\t\tinvalid_dependency:{:?}\n",
+                            result.invalid_dependencies
+                        ));
+                        result_str.push_str(&format!(
+                            "\t\tinvalid_exclude:{:?}",
+                            result.invalid_excludes
+                        ));
+                        result_str
+                    } else {
+                        format!("[OK]\t{}/sver.toml:[{}]", target_path, profile,)
+                    }
+                })
+                .collect::<Vec<String>>()
+        })
+        .collect();
+    Ok(result)
 }
 
 pub fn list_sources(path: &str) -> Result<Vec<String>, Box<dyn Error>> {

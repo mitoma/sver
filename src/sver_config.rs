@@ -1,5 +1,11 @@
 // sver.toml ファイルの操作を扱うモジュール
-use std::{collections::BTreeMap, error::Error, fs::File, io::Write, path::Path};
+use std::{
+    collections::BTreeMap,
+    error::Error,
+    fs::File,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use git2::Repository;
 use log::debug;
@@ -50,6 +56,14 @@ impl SverConfig {
         Ok(true)
     }
 
+    fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
+        let mut path_buf = PathBuf::new();
+        path_buf.push(path);
+        let result = path_buf.parent().map(|path| path.to_str()).flatten();
+        let result = result.map(|s| s.to_string());
+        result.ok_or("invalid path".into())
+    }
+
     pub(crate) fn load_all_configs(
         repo: &Repository,
     ) -> Result<BTreeMap<String, BTreeMap<String, SverConfig>>, Box<dyn Error>> {
@@ -67,13 +81,13 @@ impl SverConfig {
             );
             if is_sver_config_in_root_directory || is_sver_config_in_sub_directory {
                 debug!("load sver. path:{}", String::from_utf8(entry.path.clone())?);
-
+                let target_path = Self::entry_parent(&String::from_utf8(entry.path.clone())?)?;
                 let blob = repo.find_blob(entry.id)?;
 
                 debug!("content:{}", String::from_utf8(blob.content().to_vec())?);
 
                 let config = toml::from_slice::<BTreeMap<String, SverConfig>>(blob.content())?;
-                result.insert(String::from_utf8(entry.path)?, config);
+                result.insert(target_path, config);
             }
         }
         Ok(result)

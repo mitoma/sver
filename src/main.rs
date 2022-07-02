@@ -7,7 +7,7 @@ use crate::cli::outputs::format_versions;
 use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
 use log::debug;
-use sver::{calc_version, init_sver_config, list_sources, Version, verify_sver_config};
+use sver::{calc_version, init_sver_config, list_sources, verify_sver_config, Version};
 
 fn main() -> ExitCode {
     env_logger::init();
@@ -62,6 +62,6 @@ fn init(path: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn verify() -> Result<(), Box<dyn Error>> {
-    verify_sver_config()?;
+    verify_sver_config()?.iter().for_each(|s| println!("{}", s));
     Ok(())
 }
