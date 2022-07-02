@@ -306,15 +306,12 @@ mod tests {
     use log::debug;
     use uuid::Uuid;
 
-    use crate::{
-        calc_hash_string, calc_version, filemode::FileMode, list_sorted_entries, list_sources,
-    };
+    use crate::{calc_version, filemode::FileMode, list_sources};
 
     static INIT: Once = Once::new();
 
     pub fn initialize() {
         INIT.call_once(|| {
-            std::env::set_var("RUST_LOG", "debug");
             env_logger::init();
         });
     }
@@ -409,6 +406,12 @@ mod tests {
         }
     }
 
+    fn calc_target_path(repo: &Repository, path: &str) -> String {
+        let mut path_buf = repo.workdir().unwrap().to_path_buf();
+        path_buf.push(path);
+        path_buf.to_str().unwrap().into()
+    }
+
     // repo layout
     // .
     // + hello.txt
@@ -423,10 +426,11 @@ mod tests {
         add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
         commit(&repo, "setup");
 
+        let target_path = &calc_target_path(&repo, "");
+
         // exercise
-        let repo_path = repo.workdir().unwrap().to_str().unwrap();
-        let sources = list_sources(repo_path).unwrap();
-        let version = calc_version(repo_path).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
         assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
@@ -458,23 +462,17 @@ mod tests {
             .as_bytes(),
         );
         commit(&repo, "setup");
-        let target_path = "service2";
+
+        let target_path = &calc_target_path(&repo, "service2");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 2);
-
-        let mut iter = entries.iter();
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("service1/hello.txt".as_bytes(), key);
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("service2/sver.toml".as_bytes(), key);
-
+        assert_eq!(sources, vec!["service1/hello.txt", "service2/sver.toml"]);
         assert_eq!(
-            hash,
+            version.version,
             "0cb6c0434a87e4ce7f18388365004a4809664cfd2c86b6bbd2b1572a005a564a"
         );
     }
@@ -512,44 +510,30 @@ mod tests {
         commit(&repo, "setup");
 
         {
-            let target_path = "service1";
+            let target_path = &calc_target_path(&repo, "service1");
 
             // exercise
-            let entries = list_sorted_entries(&repo, target_path).unwrap();
-            let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+            let sources = list_sources(target_path).unwrap();
+            let version = calc_version(target_path).unwrap();
 
             // verify
-            assert_eq!(entries.len(), 2);
-
-            let mut iter = entries.iter();
-            let (key, _) = iter.next().unwrap();
-            assert_eq!("service1/sver.toml".as_bytes(), key);
-            let (key, _) = iter.next().unwrap();
-            assert_eq!("service2/sver.toml".as_bytes(), key);
-
+            assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
             assert_eq!(
-                hash,
+                version.version,
                 "b3da97a449609fb4f3b14c47271b92858f2e4fa7986bfaa321a2a65ed775ae57"
             );
         }
         {
-            let target_path = "service2";
+            let target_path = &calc_target_path(&repo, "service2");
 
             // exercise
-            let entries = list_sorted_entries(&repo, target_path).unwrap();
-            let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+            let sources = list_sources(target_path).unwrap();
+            let version = calc_version(target_path).unwrap();
 
             // verify
-            assert_eq!(entries.len(), 2);
-
-            let mut iter = entries.iter();
-            let (key, _) = iter.next().unwrap();
-            assert_eq!("service1/sver.toml".as_bytes(), key);
-            let (key, _) = iter.next().unwrap();
-            assert_eq!("service2/sver.toml".as_bytes(), key);
-
+            assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
             assert_eq!(
-                hash,
+                version.version,
                 "d48299e3ecbd6943a51042d436002f06086c7b4d9d50bd1e2ad6d872bd4fb3d7"
             );
         }
@@ -580,23 +564,17 @@ mod tests {
         );
         add_blog(&repo, "doc/README.txt", "README".as_bytes());
         commit(&repo, "setup");
-        let target_path = "";
+
+        let target_path = &calc_target_path(&repo, "");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 2);
-
-        let mut iter = entries.iter();
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("hello.txt".as_bytes(), key);
-        let (key, _) = iter.next().unwrap();
-        assert_eq!("sver.toml".as_bytes(), key);
-
+        assert_eq!(sources, vec!["hello.txt", "sver.toml"]);
         assert_eq!(
-            hash,
+            version.version,
             "a53b015257360d95600b8f0b749c01a651e803aa05395a8f6b39e194f95c3dfe"
         );
     }
@@ -618,24 +596,17 @@ mod tests {
         );
 
         commit(&repo, "setup");
-        let target_path = "";
+
+        let target_path = &calc_target_path(&repo, "");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 2);
-
-        let mut iter = entries.iter();
-        let (key, _) = iter.next().unwrap();
-        assert_eq!(".gitmodules".as_bytes(), key);
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("bano".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Commit);
-
+        assert_eq!(sources, vec![".gitmodules", "bano"]);
         assert_eq!(
-            hash,
+            version.version,
             "2600f60368549f186d7b48fe48765dbd57580cc416e91dc3fbca264d62d18f31"
         );
     }
@@ -655,25 +626,17 @@ mod tests {
         add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
         add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
         commit(&repo, "setup");
-        let target_path = "linkdir";
+
+        let target_path = &calc_target_path(&repo, "linkdir");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 2);
-
-        let mut iter = entries.iter();
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("linkdir/symlink".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Link);
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("original/README.txt".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Blob);
-
+        assert_eq!(sources, vec!["linkdir/symlink", "original/README.txt"]);
         assert_eq!(
-            hash,
+            version.version,
             "604b932c22dc969de21c8241ff46ea40f1a37d36050cc9d11345679389552d29"
         );
     }
@@ -696,28 +659,24 @@ mod tests {
 
         add_symlink(&repo, "linkdir/symlink", "../original");
         commit(&repo, "setup");
-        let target_path = "linkdir";
+
+        let target_path = &calc_target_path(&repo, "linkdir");
 
         // exercise
-        let entries = list_sorted_entries(&repo, target_path).unwrap();
-        let hash = calc_hash_string(&repo, target_path.as_bytes(), &entries).unwrap();
+        let sources = list_sources(target_path).unwrap();
+        let version = calc_version(target_path).unwrap();
 
         // verify
-        assert_eq!(entries.len(), 3);
-
-        let mut iter = entries.iter();
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("linkdir/symlink".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Link);
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("original/README.txt".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Blob);
-        let (key, id) = iter.next().unwrap();
-        assert_eq!("original/Sample.txt".as_bytes(), key);
-        assert_eq!(id.mode, FileMode::Blob);
-
         assert_eq!(
-            hash,
+            sources,
+            vec![
+                "linkdir/symlink",
+                "original/README.txt",
+                "original/Sample.txt"
+            ]
+        );
+        assert_eq!(
+            version.version,
             "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
         );
     }
