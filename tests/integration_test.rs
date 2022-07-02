@@ -140,7 +140,7 @@ fn simple_repository() {
 
 // repo layout
 // .
-// + hello.txt
+// + hello.txt (executable)
 // + service1/world.txt
 #[test]
 fn has_blob_executable() {
