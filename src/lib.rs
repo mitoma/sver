@@ -126,7 +126,7 @@ fn calc_hash_string(
     for (path, oid_and_mode) in source {
         hasher.update(path);
         match oid_and_mode.mode {
-            FileMode::Blob | FileMode::Link => {
+            FileMode::Blob | FileMode::BlobExecutable | FileMode::Link => {
                 // Q. Why little endian?
                 // A. no reason.
                 hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());

@@ -44,6 +44,10 @@ fn add_blog(repo: &Repository, path: &str, content: &[u8]) {
     add_file(repo, path, content, FileMode::Blob)
 }
 
+fn add_blog_executable(repo: &Repository, path: &str, content: &[u8]) {
+    add_file(repo, path, content, FileMode::BlobExecutable)
+}
+
 fn add_symlink(repo: &Repository, link: &str, original: &str) {
     add_file(repo, link, original.as_bytes(), FileMode::Link)
 }
@@ -131,6 +135,34 @@ fn simple_repository() {
     assert_eq!(
         version.version,
         "c7eacf9aee8ced0b9131dce96c2e2077e2c683a7d39342c8c13b32fefac5662a"
+    );
+}
+
+// repo layout
+// .
+// + hello.txt (executable)
+// + service1/world.txt
+#[test]
+fn has_blob_executable() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog_executable(&repo, "hello.txt", "hello world!".as_bytes());
+    add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+    commit(&repo, "setup");
+
+    let target_path = &calc_target_path(&repo, "");
+
+    // exercise
+    let sources = list_sources(target_path).unwrap();
+    let version = calc_version(target_path).unwrap();
+
+    // verify
+    assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
+    assert_eq!(
+        version.version,
+        "435f0baae5406a75a66e515bf1674db348382139b8443a695a2b1c2925935160"
     );
 }
 
