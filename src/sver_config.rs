@@ -59,9 +59,9 @@ impl SverConfig {
     fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
-        let result = path_buf.parent().map(|path| path.to_str()).flatten();
+        let result = path_buf.parent().and_then(|path| path.to_str());
         let result = result.map(|s| s.to_string());
-        result.ok_or("invalid path".into())
+        result.ok_or_else(|| "invalid path".into())
     }
 
     pub(crate) fn load_all_configs(

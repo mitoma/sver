@@ -45,7 +45,11 @@ pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
             sver_config
                 .iter()
                 .map(|(profile, config)| {
-                    let path = if target_path == "" { "" } else { target_path };
+                    let path = if target_path.is_empty() {
+                        ""
+                    } else {
+                        target_path
+                    };
                     if let Some(result) = config.verify(path, &repo).unwrap() {
                         let mut result_str = String::new();
                         result_str
