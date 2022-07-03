@@ -1,6 +1,6 @@
 // sver.toml ファイルの操作を扱うモジュール
 use std::{
-    collections::BTreeMap,
+    collections::{btree_map::Iter, BTreeMap},
     error::Error,
     fs::File,
     io::Write,
@@ -24,26 +24,66 @@ pub(crate) struct SverConfig {
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub(crate) struct SverConfigs {
     #[serde(skip)]
-    target_path: String,
+    pub(crate) target_path: String,
     #[serde(default, flatten)]
     configs: BTreeMap<String, SverConfig>,
 }
 
 impl SverConfigs {
-    pub(crate) fn len(&self) -> usize {
-        self.configs.len()
-    }
-
-    pub(crate) fn keys(&self) -> Vec<String> {
-        self.configs.keys().cloned().collect()
-    }
-
     pub(crate) fn get(&self, key: &str) -> Option<SverConfig> {
         self.configs.get(key).cloned()
     }
 
     pub(crate) fn add(&mut self, profile: &str, config: SverConfig) -> Option<SverConfig> {
         self.configs.insert(profile.to_owned(), config)
+    }
+
+    pub(crate) fn iter(&self) -> Iter<String, SverConfig> {
+        self.configs.iter()
+    }
+
+    fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
+        let mut path_buf = PathBuf::new();
+        path_buf.push(path);
+        let result = path_buf.parent().and_then(|path| path.to_str());
+        let result = result.map(|s| s.to_string());
+        result.ok_or_else(|| "invalid path".into())
+    }
+
+    pub(crate) fn config_file_path(&self) -> String {
+        if self.target_path.is_empty() {
+            "sver.toml".to_owned()
+        } else {
+            format!("{}/sver.toml", &self.target_path)
+        }
+    }
+
+    pub(crate) fn load_all_configs(repo: &Repository) -> Result<Vec<Self>, Box<dyn Error>> {
+        let mut result: Vec<Self> = Vec::new();
+        for entry in repo.index()?.iter() {
+            let is_sver_config_in_root_directory = entry.path == "sver.toml".as_bytes();
+            let is_sver_config_in_sub_directory = entry
+                .path
+                .ends_with([SEPARATOR_BYTE, "sver.toml".as_bytes()].concat().as_slice());
+            debug!(
+                "path:{}, is_root:{}, is_sub:{}",
+                String::from_utf8(entry.path.clone())?,
+                is_sver_config_in_root_directory,
+                is_sver_config_in_sub_directory
+            );
+            if is_sver_config_in_root_directory || is_sver_config_in_sub_directory {
+                debug!("load sver. path:{}", String::from_utf8(entry.path.clone())?);
+                let target_path = Self::entry_parent(&String::from_utf8(entry.path.clone())?)?;
+                let blob = repo.find_blob(entry.id)?;
+
+                debug!("content:{}", String::from_utf8(blob.content().to_vec())?);
+
+                let mut config = toml::from_slice::<Self>(blob.content())?;
+                config.target_path = target_path;
+                result.push(config);
+            }
+        }
+        Ok(result)
     }
 }
 
@@ -82,43 +122,6 @@ impl SverConfig {
         file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
         file.flush()?;
         Ok(true)
-    }
-
-    fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
-        let mut path_buf = PathBuf::new();
-        path_buf.push(path);
-        let result = path_buf.parent().and_then(|path| path.to_str());
-        let result = result.map(|s| s.to_string());
-        result.ok_or_else(|| "invalid path".into())
-    }
-
-    pub(crate) fn load_all_configs(
-        repo: &Repository,
-    ) -> Result<BTreeMap<String, BTreeMap<String, SverConfig>>, Box<dyn Error>> {
-        let mut result = BTreeMap::new();
-        for entry in repo.index()?.iter() {
-            let is_sver_config_in_root_directory = entry.path == "sver.toml".as_bytes();
-            let is_sver_config_in_sub_directory = entry
-                .path
-                .ends_with([SEPARATOR_BYTE, "sver.toml".as_bytes()].concat().as_slice());
-            debug!(
-                "path:{}, is_root:{}, is_sub:{}",
-                String::from_utf8(entry.path.clone())?,
-                is_sver_config_in_root_directory,
-                is_sver_config_in_sub_directory
-            );
-            if is_sver_config_in_root_directory || is_sver_config_in_sub_directory {
-                debug!("load sver. path:{}", String::from_utf8(entry.path.clone())?);
-                let target_path = Self::entry_parent(&String::from_utf8(entry.path.clone())?)?;
-                let blob = repo.find_blob(entry.id)?;
-
-                debug!("content:{}", String::from_utf8(blob.content().to_vec())?);
-
-                let config = toml::from_slice::<BTreeMap<String, SverConfig>>(blob.content())?;
-                result.insert(target_path, config);
-            }
-        }
-        Ok(result)
     }
 
     pub(crate) fn verify(
@@ -180,8 +183,11 @@ dependencies = ["dep2"]
 excludes = ["exclude2"]
 "#;
         let configs = toml::from_slice::<SverConfigs>(test.as_bytes()).unwrap();
-        assert_eq!(configs.len(), 2);
-        assert_eq!(configs.keys(), vec!["default", "ext"]);
+        assert_eq!(configs.configs.len(), 2);
+        assert_eq!(
+            configs.configs.keys().cloned().collect::<Vec<String>>(),
+            vec!["default", "ext"]
+        );
         assert_eq!(
             configs.get("default").unwrap(),
             SverConfig {

@@ -8,7 +8,7 @@ use std::{
 };
 
 use self::filemode::FileMode;
-use self::sver_config::SverConfig;
+use self::sver_config::{SverConfig, SverConfigs};
 use git2::{Oid, Repository};
 use log::debug;
 use sha2::{Digest, Sha256};
@@ -37,36 +37,41 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
 
 pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
     let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(".")?;
-    let configs = SverConfig::load_all_configs(&repo)?;
-    configs.keys().for_each(|key| debug!("{}", key));
+    let configs = SverConfigs::load_all_configs(&repo)?;
+    configs
+        .iter()
+        .for_each(|config| debug!("{}", config.config_file_path()));
     let result: Vec<String> = configs
         .iter()
-        .flat_map(|(target_path, sver_config)| {
+        .flat_map(|sver_config| {
+            let target_path = sver_config.target_path.clone();
+            let config_file_path = sver_config.config_file_path();
             sver_config
                 .iter()
-                .map(|(profile, config)| {
-                    let path = if target_path.is_empty() {
-                        ""
-                    } else {
-                        target_path
-                    };
-                    if let Some(result) = config.verify(path, &repo).unwrap() {
-                        let mut result_str = String::new();
-                        result_str
-                            .push_str(&format!("[NG]\t{}/sver.toml:{}\n", target_path, profile));
-                        result_str.push_str(&format!(
-                            "\t\tinvalid_dependency:{:?}\n",
-                            result.invalid_dependencies
-                        ));
-                        result_str.push_str(&format!(
-                            "\t\tinvalid_exclude:{:?}",
-                            result.invalid_excludes
-                        ));
-                        result_str
-                    } else {
-                        format!("[OK]\t{}/sver.toml:[{}]", target_path, profile,)
-                    }
-                })
+                .map(
+                    |(profile, config)| match config.verify(&target_path, &repo) {
+                        Ok(Some(result)) => {
+                            let mut result_str = String::new();
+                            result_str
+                                .push_str(&format!("[NG]\t{}:{}\n", config_file_path, profile));
+                            result_str.push_str(&format!(
+                                "\t\tinvalid_dependency:{:?}\n",
+                                result.invalid_dependencies
+                            ));
+                            result_str.push_str(&format!(
+                                "\t\tinvalid_exclude:{:?}",
+                                result.invalid_excludes
+                            ));
+                            result_str
+                        }
+                        Ok(None) => {
+                            format!("[OK]\t{}:[{}]", config_file_path, profile)
+                        }
+                        Err(err) => {
+                            format!("[NG]\t{}:[{}] error:{}", config_file_path, profile, err)
+                        }
+                    },
+                )
                 .collect::<Vec<String>>()
         })
         .collect();
