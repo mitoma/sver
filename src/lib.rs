@@ -8,7 +8,7 @@ use std::{
 };
 
 use self::filemode::FileMode;
-use self::sver_config::{SverConfig, SverConfigs};
+use self::sver_config::{ProfileConfig, SverConfig};
 use git2::{Oid, Repository};
 use log::debug;
 use sha2::{Digest, Sha256};
@@ -37,7 +37,7 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
 
 pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
     let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(".")?;
-    let configs = SverConfigs::load_all_configs(&repo)?;
+    let configs = SverConfig::load_all_configs(&repo)?;
     configs
         .iter()
         .for_each(|config| debug!("{}", config.config_file_path()));
@@ -285,7 +285,7 @@ fn collect_path_and_excludes(
     if let Some(entry) = repo.index()?.get_path(p.as_path(), 0) {
         debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
         let default_config =
-            SverConfig::load_profile(repo.find_blob(entry.id)?.content(), "default")?;
+            ProfileConfig::load_profile(repo.find_blob(entry.id)?.content(), "default")?;
         current_path_and_excludes.insert(path.to_string(), default_config.excludes.clone());
         path_and_excludes.insert(path.to_string(), default_config.excludes);
         for dependency_path in default_config.dependencies {

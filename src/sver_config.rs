@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::{match_samefile_or_include_dir, SEPARATOR_BYTE};
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub(crate) struct SverConfig {
+pub(crate) struct ProfileConfig {
     #[serde(default)]
     pub(crate) excludes: Vec<String>,
     #[serde(default)]
@@ -22,24 +22,38 @@ pub(crate) struct SverConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
-pub(crate) struct SverConfigs {
+pub(crate) struct SverConfig {
     #[serde(skip)]
     pub(crate) target_path: String,
     #[serde(default, flatten)]
-    configs: BTreeMap<String, SverConfig>,
+    profiles: BTreeMap<String, ProfileConfig>,
 }
 
-impl SverConfigs {
-    pub(crate) fn get(&self, key: &str) -> Option<SverConfig> {
-        self.configs.get(key).cloned()
+impl SverConfig {
+    pub(crate) fn get(&self, key: &str) -> Option<ProfileConfig> {
+        self.profiles.get(key).cloned()
     }
 
-    pub(crate) fn add(&mut self, profile: &str, config: SverConfig) -> Option<SverConfig> {
-        self.configs.insert(profile.to_owned(), config)
+    pub(crate) fn add(&mut self, profile: &str, config: ProfileConfig) -> Option<ProfileConfig> {
+        self.profiles.insert(profile.to_owned(), config)
     }
 
-    pub(crate) fn iter(&self) -> Iter<String, SverConfig> {
-        self.configs.iter()
+    pub(crate) fn iter(&self) -> Iter<String, ProfileConfig> {
+        self.profiles.iter()
+    }
+
+    pub(crate) fn write_initial_config(path: &Path) -> Result<bool, Box<dyn Error>> {
+        let mut config = Self::default();
+        config.add("default", ProfileConfig::default());
+
+        if File::open(path).is_ok() {
+            return Ok(false);
+        }
+
+        let mut file = File::create(path)?;
+        file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
+        file.flush()?;
+        Ok(true)
     }
 
     fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
@@ -99,29 +113,15 @@ impl VerifyResult {
     }
 }
 
-impl SverConfig {
+impl ProfileConfig {
     pub(crate) fn load_profile(
         content: &[u8],
         profile: &str,
-    ) -> Result<SverConfig, Box<dyn Error>> {
-        let config = toml::from_slice::<SverConfigs>(content)?;
+    ) -> Result<ProfileConfig, Box<dyn Error>> {
+        let config = toml::from_slice::<SverConfig>(content)?;
         config
             .get(profile)
             .ok_or_else(|| format!("profile[{}] is not found", profile).into())
-    }
-
-    pub(crate) fn write_initial_config(path: &Path) -> Result<bool, Box<dyn Error>> {
-        let mut config = SverConfigs::default();
-        config.add("default", SverConfig::default());
-
-        if File::open(path).is_ok() {
-            return Ok(false);
-        }
-
-        let mut file = File::create(path)?;
-        file.write_all(toml::to_string_pretty(&config)?.as_bytes())?;
-        file.flush()?;
-        Ok(true)
     }
 
     pub(crate) fn verify(
@@ -171,7 +171,7 @@ impl SverConfig {
 
 #[cfg(test)]
 mod test {
-    use crate::sver_config::{SverConfig, SverConfigs};
+    use crate::sver_config::{ProfileConfig, SverConfig};
 
     #[test]
     fn sver_configs_test() {
@@ -182,15 +182,15 @@ excludes = ["exclude1"]
 dependencies = ["dep2"]
 excludes = ["exclude2"]
 "#;
-        let configs = toml::from_slice::<SverConfigs>(test.as_bytes()).unwrap();
-        assert_eq!(configs.configs.len(), 2);
+        let configs = toml::from_slice::<SverConfig>(test.as_bytes()).unwrap();
+        assert_eq!(configs.profiles.len(), 2);
         assert_eq!(
-            configs.configs.keys().cloned().collect::<Vec<String>>(),
+            configs.profiles.keys().cloned().collect::<Vec<String>>(),
             vec!["default", "ext"]
         );
         assert_eq!(
             configs.get("default").unwrap(),
-            SverConfig {
+            ProfileConfig {
                 dependencies: vec!["dep1".to_owned()],
                 excludes: vec!["exclude1".to_owned()],
             }
