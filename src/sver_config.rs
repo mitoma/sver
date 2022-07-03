@@ -13,12 +13,38 @@ use serde::{Deserialize, Serialize};
 
 use crate::{match_samefile_or_include_dir, SEPARATOR_BYTE};
 
-#[derive(Serialize, Deserialize, Clone, Default)]
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub(crate) struct SverConfig {
     #[serde(default)]
     pub(crate) excludes: Vec<String>,
     #[serde(default)]
     pub(crate) dependencies: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
+pub(crate) struct SverConfigs {
+    #[serde(skip)]
+    target_path: String,
+    #[serde(default, flatten)]
+    configs: BTreeMap<String, SverConfig>,
+}
+
+impl SverConfigs {
+    pub(crate) fn len(&self) -> usize {
+        self.configs.len()
+    }
+
+    pub(crate) fn keys(&self) -> Vec<String> {
+        self.configs.keys().cloned().collect()
+    }
+
+    pub(crate) fn get(&self, key: &str) -> Option<SverConfig> {
+        self.configs.get(key).cloned()
+    }
+
+    pub(crate) fn add(&mut self, profile: &str, config: SverConfig) -> Option<SverConfig> {
+        self.configs.insert(profile.to_owned(), config)
+    }
 }
 
 #[derive(Default, Debug)]
@@ -38,13 +64,15 @@ impl SverConfig {
         content: &[u8],
         profile: &str,
     ) -> Result<SverConfig, Box<dyn Error>> {
-        let config = toml::from_slice::<BTreeMap<String, SverConfig>>(content)?;
-        Ok(config[profile].clone())
+        let config = toml::from_slice::<SverConfigs>(content)?;
+        config
+            .get(profile)
+            .ok_or_else(|| format!("profile[{}] is not found", profile).into())
     }
 
     pub(crate) fn write_initial_config(path: &Path) -> Result<bool, Box<dyn Error>> {
-        let mut config = BTreeMap::new();
-        config.insert("default", SverConfig::default());
+        let mut config = SverConfigs::default();
+        config.add("default", SverConfig::default());
 
         if File::open(path).is_ok() {
             return Ok(false);
@@ -135,5 +163,35 @@ impl SverConfig {
         } else {
             Ok(Some(result))
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::sver_config::{SverConfig, SverConfigs};
+
+    #[test]
+    fn sver_configs_test() {
+        let test = r#"[default]
+dependencies = ["dep1"]
+excludes = ["exclude1"]
+[ext]
+dependencies = ["dep2"]
+excludes = ["exclude2"]
+"#;
+        let configs = toml::from_slice::<SverConfigs>(test.as_bytes()).unwrap();
+        assert_eq!(configs.len(), 2);
+        assert_eq!(configs.keys(), vec!["default", "ext"]);
+        assert_eq!(
+            configs.get("default").unwrap(),
+            SverConfig {
+                dependencies: vec!["dep1".to_owned()],
+                excludes: vec!["exclude1".to_owned()],
+            }
+        );
+        assert!(configs.target_path.is_empty());
+
+        let toml_str = toml::to_string_pretty(&configs).unwrap();
+        println!("{}", toml_str);
     }
 }
