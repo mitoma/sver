@@ -45,3 +45,28 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+
+      # artifact phase
+      - name: build artifact
+        uses: ./.github/actions/exec_sver
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          phase: artifact-${{ matrix.target }}
+          command: |
+            cargo build --release
+            mkdir artifact
+            cd artifact
+            cp ../LICENSE .
+            cp ../README.md .
+            if [ "${{ matrix.target }}" = "windows" ]; then
+              cp ../target/release/sver.exe .
+            else
+              cp ../target/release/sver .
+            fi
+          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          artifact_name: sver-${{ matrix.target }}

@@ -31,6 +31,15 @@ inputs:
     required: false
     default: ''
 
+  artifact_name:
+    description: 'artifact name'
+    required: false
+    default: ''
+  artifact_path:
+    description: 'artifact path'
+    required: false
+    default: ''
+
 runs:
   using: "composite"
   steps:
@@ -77,6 +86,12 @@ runs:
       with:
         name: ${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
         path: ci-result/${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success
+
+    - uses: actions/upload-artifact@v3
+      if: ${{ steps.ci_result.outputs.exit_code != '0' && inputs.artifact_name != '' && inputs.artifact_path != ''  }}
+      with:
+        name: ${{ inputs.artifact_name }}-${{ steps.calc_version.outputs.version }}
+        path: ${{ inputs.artifact_path }}
 
     - name: echo skip log
       if: ${{ steps.ci_result.outputs.exit_code == '0' }}
