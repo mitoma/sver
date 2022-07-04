@@ -6,16 +6,38 @@ inputs:
     description: 'sver release version'
     required: false
     default: 'v0.1.2'
+  os:
+    description: 'sver release os'
+    required: false
+    default: 'linux'
 
 runs:
   using: "composite"
   steps:
-    - name: install sver
+    - name: install sver (linux)
+      if: ${{ inputs.os == 'linux' }}
       shell: bash
       run: |
+        mkdir -p "$HOME/.local/bin"
         TEMPDIR=$(mktemp -d)
-        cd $TEMPDIR
-        wget "https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/sver_${{ inputs.version }}_linux_amd64.zip"
-        unzip sver_${{ inputs.version }}_linux_amd64.zip
-        mv sver /usr/local/bin
+        FILE_NAME="sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
+        FILE_URL="https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/$FILE_NAME"
+        cd "$TEMPDIR"
+        curl -L "$FILE_URL" -o "$FILE_NAME"
+        unzip "$FILE_NAME"
+        mv sver "$HOME/.local/bin"
+        sver --help
+
+    - name: install sver (windows)
+      if: ${{ inputs.os == 'windows' }}
+      shell: bash
+      run: |
+        mkdir -p "$HOME/bin"
+        TEMPDIR=$(mktemp -d)
+        FILE_NAME="sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
+        FILE_URL="https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/$FILE_NAME"
+        cd "$TEMPDIR"
+        curl -L "$FILE_URL" -o "$FILE_NAME"
+        unzip "$FILE_NAME"
+        mv sver.exe "$HOME/bin"
         sver --help
