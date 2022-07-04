@@ -25,6 +25,16 @@ pub(crate) enum Commands {
         #[clap(default_value = ".")]
         path: String,
     },
+
+    /// generate empty config file
+    Init {
+        /// target path
+        #[clap(default_value = ".")]
+        path: String,
+    },
+
+    /// verify all config files in repository
+    Verify,
 }
 
 #[derive(Debug, Clone, clap::ArgEnum)]

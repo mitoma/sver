@@ -5,7 +5,7 @@ inputs:
   version:
     description: 'sver release version'
     required: false
-    default: 'v0.1.1'
+    default: 'v0.1.2'
 
 runs:
   using: "composite"
@@ -15,7 +15,7 @@ runs:
       run: |
         TEMPDIR=$(mktemp -d)
         cd $TEMPDIR
-        wget "https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/sver_linux_amd64.zip"
-        unzip sver_linux_amd64.zip
-        mv sver_linux_amd64/sver /usr/local/bin
+        wget "https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/sver_${{ inputs.version }}_linux_amd64.zip"
+        unzip sver_${{ inputs.version }}_linux_amd64.zip
+        mv sver /usr/local/bin
         sver --help
