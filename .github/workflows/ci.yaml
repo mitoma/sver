@@ -70,3 +70,4 @@ jobs:
             ~/.cargo/git
             target
           artifact_name: sver-${{ matrix.target }}
+          artifact_path: artifact
