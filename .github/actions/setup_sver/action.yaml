@@ -39,5 +39,5 @@ runs:
         cd "$TEMPDIR"
         curl -L "$FILE_URL" -o "$FILE_NAME"
         unzip "$FILE_NAME"
-        mv sver.exe "$HOME/.local/bin"
+        mv sver.exe "$HOME/bin"
         sver --help
