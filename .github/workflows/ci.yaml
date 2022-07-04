@@ -7,59 +7,41 @@ env:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        target:
+          - linux
+          - windows
+        include:
+          - target: linux
+            os: ubuntu-latest
+          - target: windows
+            os: windows-latest
 
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    # setup and calc version
-    - uses: ./.github/actions/setup_sver
-
-    # ci phase
-    - name: check all
-      uses: ./.github/actions/exec_sver
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        phase: check
-        command: |
-          cargo fmt --all -- --check
-          cargo clippy --verbose -- -D warnings
-          cargo build --verbose
-          cargo test --verbose
-        cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        cache_restore-keys: ${{ runner.os }}-cargo-
-        cache_path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
-
-  win-build:
-
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    # setup and calc version
-    - uses: ./.github/actions/setup_sver
-      with:
-        os: "windows"
+      # setup and calc version
+      - uses: ./.github/actions/setup_sver
+        with:
+          os: ${{ matrix.target }}
 
-    # ci phase
-    - name: check all
-      uses: ./.github/actions/exec_sver
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        phase: check
-        command: |
-          cargo fmt --all -- --check
-          cargo clippy --verbose -- -D warnings
-          cargo build --verbose
-          cargo test --verbose
-        cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        cache_restore-keys: ${{ runner.os }}-cargo-
-        cache_path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-          target
+      # ci phase
+      - name: check all
+        uses: ./.github/actions/exec_sver
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          phase: check-${{ matrix.target }}
+          command: |
+            cargo fmt --all -- --check
+            cargo clippy --verbose -- -D warnings
+            cargo build --verbose
+            cargo test --verbose
+          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
