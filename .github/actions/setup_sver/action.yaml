@@ -18,8 +18,10 @@ runs:
       shell: bash
       run: |
         TEMPDIR=$(mktemp -d)
-        cd $TEMPDIR
-        wget "https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
-        unzip sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip
-        mv sver /usr/local/bin
+        FILE_NAME="sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
+        FILE_URL="https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/$FILE_NAME"
+        cd "$TEMPDIR"
+        curl "$FILE_URL" -o "$FILE_NAME"
+        unzip "$FILE_NAME"
+        echo "$TEMPDIR" >> "$GITHUB_PATH"
         sver --help
