@@ -17,6 +17,7 @@ runs:
     - name: install sver
       shell: bash
       run: |
+        mkdir -p "$HOME/.local/bin"
         TEMPDIR=$(mktemp -d)
         FILE_NAME="sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
         FILE_URL="https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/$FILE_NAME"
