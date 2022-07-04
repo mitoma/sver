@@ -36,9 +36,9 @@ jobs:
           phase: check-${{ matrix.target }}
           command: |
             cargo fmt --all -- --check
-            cargo clippy --verbose -- -D warnings
-            cargo build --verbose
-            cargo test --verbose
+            cargo clippy -- -D warnings
+            cargo build
+            cargo test
           cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           cache_restore-keys: ${{ runner.os }}-cargo-
           cache_path: |
