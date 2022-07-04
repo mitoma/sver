@@ -43,6 +43,8 @@ jobs:
 
     # setup and calc version
     - uses: ./.github/actions/setup_sver
+      with:
+        os: "windows"
 
     # ci phase
     - name: check all
