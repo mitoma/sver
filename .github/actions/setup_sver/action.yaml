@@ -16,6 +16,6 @@ runs:
         TEMPDIR=$(mktemp -d)
         cd $TEMPDIR
         wget "https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/sver_${{ inputs.version }}_linux_amd64.zip"
-        unzip sver_linux_amd64.zip
+        unzip sver_${{ inputs.version }}_linux_amd64.zip
         mv sver /usr/local/bin
         sver --help
