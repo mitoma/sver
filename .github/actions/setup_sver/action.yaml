@@ -23,5 +23,5 @@ runs:
         cd "$TEMPDIR"
         curl -L "$FILE_URL" -o "$FILE_NAME"
         unzip "$FILE_NAME"
-        echo "$TEMPDIR" >> "$GITHUB_PATH"
+        mv sver* "$HOME/.local/bin"
         sver --help
