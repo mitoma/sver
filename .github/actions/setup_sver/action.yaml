@@ -25,4 +25,7 @@ runs:
         curl -L "$FILE_URL" -o "$FILE_NAME"
         unzip "$FILE_NAME"
         mv sver* "$HOME/.local/bin"
+        echo "$HOME/.local/bin"
+        ls "$HOME/.local/bin" 
+        echo $PATH
         sver --help
