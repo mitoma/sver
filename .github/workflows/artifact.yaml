@@ -1,12 +1,15 @@
-name: "Continuous Integration"
+name: "Build Artifact"
 
-on: [push, pull_request]
+on:
+  push:
+    #branches: [main]
+    branches: [release-automation]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build_artifact:
     strategy:
       matrix:
         target:
@@ -28,20 +31,28 @@ jobs:
         with:
           os: ${{ matrix.target }}
 
-      # ci phase
-      - name: check all
+      # artifact phase
+      - name: build artifact
         uses: ./.github/actions/exec_sver
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          phase: check-${{ matrix.target }}
+          phase: artifact-${{ matrix.target }}
           command: |
-            cargo fmt --all -- --check
-            cargo clippy -- -D warnings
-            cargo build
-            cargo test
+            cargo build --release
+            mkdir artifact
+            cd artifact
+            cp ../LICENSE .
+            cp ../README.md .
+            if [ "${{ matrix.target }}" = "windows" ]; then
+              cp ../target/release/sver.exe .
+            else
+              cp ../target/release/sver .
+            fi
           cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           cache_restore-keys: ${{ runner.os }}-cargo-
           cache_path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
+          artifact_name: sver-${{ matrix.target }}
+          artifact_path: artifact
