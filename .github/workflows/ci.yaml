@@ -1,6 +1,6 @@
 name: "Continuous Integration"
 
-on: [push, pull_request]
+on: [push, pull_request, tag]
 
 env:
   CARGO_TERM_COLOR: always
@@ -49,7 +49,11 @@ jobs:
 
   # build and upload artifact
   build_artifact:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/release-automation' }}
+
+    # run on branch [main] or tag [v*.*.*]
+    if: |
+      ${{ (github.event_name == 'push' && github.ref == 'refs/heads/release-automation') 
+          || (github.event_name == 'tag' && github.ref == 'refs/tags/v*.*.*') }}
     needs: [build]
 
     strategy:
@@ -97,3 +101,25 @@ jobs:
             target
           artifact_name: sver-${{ matrix.target }}
           artifact_path: artifact
+
+  # release sver
+  release_sver:
+    # run on tag [v*.*.*]
+    if: ${{ github.event_name == 'tag' && github.ref == 'refs/tags/v*.*.*' }}
+    needs: [build_artifact]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup_sver
+        with:
+          os: ${{ matrix.target }}
+
+      # artifact phase
+      - name: build artifact
+        run: |
+          echo "hello"
+          VERSION=$(sver .)
+          echo "sver version:$VERSION"
