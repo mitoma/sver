@@ -6,6 +6,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+
+  # check and build
   build:
     strategy:
       matrix:
@@ -23,7 +25,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # setup and calc version
       - uses: ./.github/actions/setup_sver
         with:
           os: ${{ matrix.target }}
@@ -45,3 +46,54 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
+
+  # build and upload artifact
+  build_artifact:
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/release-automation' }}
+    needs: [build]
+
+    strategy:
+      matrix:
+        target:
+          - linux
+          - windows
+        include:
+          - target: linux
+            os: ubuntu-latest
+          - target: windows
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup_sver
+        with:
+          os: ${{ matrix.target }}
+
+      # artifact phase
+      - name: build artifact
+        uses: ./.github/actions/exec_sver
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          phase: artifact-${{ matrix.target }}
+          command: |
+            cargo build --release
+            mkdir artifact
+            cd artifact
+            cp ../LICENSE .
+            cp ../README.md .
+            if [ "${{ matrix.target }}" = "windows" ]; then
+              cp ../target/release/sver.exe .
+            else
+              cp ../target/release/sver .
+            fi
+          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          artifact_name: sver-${{ matrix.target }}
+          artifact_path: artifact
