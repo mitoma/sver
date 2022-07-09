@@ -1,6 +1,6 @@
 name: "Continuous Integration"
 
-on: [push, pull_request, tag]
+on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
@@ -52,8 +52,8 @@ jobs:
 
     # run on branch [main] or tag [v*.*.*]
     if: |
-      ${{ (github.event_name == 'push' && github.ref == 'refs/heads/release-automation') 
-          || (github.event_name == 'tag' && github.ref == 'refs/tags/v*.*.*') }}
+      ${{ github.event_name == 'push'
+          && (github.ref == 'refs/heads/release-automation' || github.ref == 'refs/tags/v*.*.*') }}
     needs: [build]
 
     strategy:
@@ -105,7 +105,7 @@ jobs:
   # release sver
   release_sver:
     # run on tag [v*.*.*]
-    if: ${{ github.event_name == 'tag' && github.ref == 'refs/tags/v*.*.*' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/tags/v*.*.*' }}
     needs: [build_artifact]
 
     runs-on: ubuntu-latest
