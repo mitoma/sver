@@ -114,12 +114,17 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup_sver
-        with:
-          os: ${{ matrix.target }}
 
       # artifact phase
-      - name: build artifact
+      - id: calc_version
+        name: calc current version
         run: |
-          echo "hello"
-          VERSION=$(sver .)
-          echo "sver version:$VERSION"
+          version="$(sver calc ${{ inputs.path }})"
+          echo "##[set-output name=version;]${version}"
+
+      - id: extract_tag
+        name: Extract tag name
+        run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
+
+      - name: create release
+        run: ./release.sh "${{ steps.extract_tag.outputs.tag }}"
