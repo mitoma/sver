@@ -128,3 +128,5 @@ jobs:
 
       - name: create release
         run: ./release.sh "${{ steps.extract_tag.outputs.tag }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
