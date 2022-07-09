@@ -50,10 +50,10 @@ jobs:
   # build and upload artifact
   build_artifact:
 
-    # run on branch [main] or tag [v*.*.*]
+    # run on branch [main] or tag [v*]
     if: |
       ${{ github.event_name == 'push'
-          && (github.ref == 'refs/heads/release-automation' || github.ref == 'refs/tags/v*.*.*') }}
+          && (github.ref == 'refs/heads/release-automation' || startsWith(github.ref, 'refs/tags/v')) }}
     needs: [build]
 
     strategy:
@@ -104,8 +104,8 @@ jobs:
 
   # release sver
   release_sver:
-    # run on tag [v*.*.*]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/tags/v*.*.*' }}
+    # run on tag [v*]
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
     needs: [build_artifact]
 
     runs-on: ubuntu-latest
