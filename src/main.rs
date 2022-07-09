@@ -62,6 +62,6 @@ fn init(path: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn verify() -> Result<(), Box<dyn Error>> {
-    verify_sver_config()?.iter().for_each(|s| println!("{}", s));
+    verify_sver_config()?.iter().for_each(|s| print!("{}", s));
     Ok(())
 }

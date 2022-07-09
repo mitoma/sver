@@ -41,37 +41,16 @@ pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
     configs
         .iter()
         .for_each(|config| debug!("{}", config.config_file_path()));
+    let index = repo.index()?;
     let result: Vec<String> = configs
         .iter()
         .flat_map(|sver_config| {
             let target_path = sver_config.target_path.clone();
-            let config_file_path = sver_config.config_file_path();
             sver_config
                 .iter()
-                .map(
-                    |(profile, config)| match config.verify(&target_path, &repo) {
-                        Ok(Some(result)) => {
-                            let mut result_str = String::new();
-                            result_str
-                                .push_str(&format!("[NG]\t{}:{}\n", config_file_path, profile));
-                            result_str.push_str(&format!(
-                                "\t\tinvalid_dependency:{:?}\n",
-                                result.invalid_dependencies
-                            ));
-                            result_str.push_str(&format!(
-                                "\t\tinvalid_exclude:{:?}",
-                                result.invalid_excludes
-                            ));
-                            result_str
-                        }
-                        Ok(None) => {
-                            format!("[OK]\t{}:[{}]", config_file_path, profile)
-                        }
-                        Err(err) => {
-                            format!("[NG]\t{}:[{}] error:{}", config_file_path, profile, err)
-                        }
-                    },
-                )
+                .map(|(profile, config)| {
+                    format!("{}", config.verify(&target_path, profile, &index))
+                })
                 .collect::<Vec<String>>()
         })
         .collect();
