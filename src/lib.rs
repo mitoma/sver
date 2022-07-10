@@ -1,5 +1,5 @@
 pub mod filemode;
-mod sver_config;
+pub mod sver_config;
 
 use std::{
     collections::{BTreeMap, HashMap},
@@ -12,6 +12,7 @@ use self::sver_config::{ProfileConfig, SverConfig};
 use git2::{Oid, Repository};
 use log::debug;
 use sha2::{Digest, Sha256};
+use sver_config::VerifyResult;
 
 pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
     debug!("path:{}", path);
@@ -35,44 +36,21 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("sver.toml is generated. path:{}", path))
 }
 
-pub fn verify_sver_config() -> Result<Vec<String>, Box<dyn Error>> {
-    let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(".")?;
+pub fn verify_sver_config(path: &str) -> Result<Vec<VerifyResult>, Box<dyn Error>> {
+    let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(path)?;
     let configs = SverConfig::load_all_configs(&repo)?;
     configs
         .iter()
         .for_each(|config| debug!("{}", config.config_file_path()));
-    let result: Vec<String> = configs
+    let index = repo.index()?;
+    let result: Vec<VerifyResult> = configs
         .iter()
         .flat_map(|sver_config| {
             let target_path = sver_config.target_path.clone();
-            let config_file_path = sver_config.config_file_path();
             sver_config
                 .iter()
-                .map(
-                    |(profile, config)| match config.verify(&target_path, &repo) {
-                        Ok(Some(result)) => {
-                            let mut result_str = String::new();
-                            result_str
-                                .push_str(&format!("[NG]\t{}:{}\n", config_file_path, profile));
-                            result_str.push_str(&format!(
-                                "\t\tinvalid_dependency:{:?}\n",
-                                result.invalid_dependencies
-                            ));
-                            result_str.push_str(&format!(
-                                "\t\tinvalid_exclude:{:?}",
-                                result.invalid_excludes
-                            ));
-                            result_str
-                        }
-                        Ok(None) => {
-                            format!("[OK]\t{}:[{}]", config_file_path, profile)
-                        }
-                        Err(err) => {
-                            format!("[NG]\t{}:[{}] error:{}", config_file_path, profile, err)
-                        }
-                    },
-                )
-                .collect::<Vec<String>>()
+                .map(|(profile, config)| config.verify(&target_path, profile, &index))
+                .collect::<Vec<VerifyResult>>()
         })
         .collect();
     Ok(result)

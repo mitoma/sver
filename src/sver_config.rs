@@ -2,12 +2,13 @@
 use std::{
     collections::{btree_map::Iter, BTreeMap},
     error::Error,
+    fmt::Display,
     fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
 
-use git2::Repository;
+use git2::{Index, Repository};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
@@ -102,14 +103,48 @@ impl SverConfig {
 }
 
 #[derive(Default, Debug)]
-pub(crate) struct VerifyResult {
+struct InnerVerifyResult {
     pub(crate) invalid_excludes: Vec<String>,
     pub(crate) invalid_dependencies: Vec<String>,
 }
 
-impl VerifyResult {
+impl InnerVerifyResult {
     fn is_empty(&self) -> bool {
         self.invalid_dependencies.is_empty() && self.invalid_excludes.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub enum VerifyResult {
+    Valid {
+        path: String,
+        profile: String,
+    },
+    Invalid {
+        path: String,
+        profile: String,
+        invalid_excludes: Vec<String>,
+        invalid_dependencies: Vec<String>,
+    },
+}
+
+impl Display for VerifyResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            VerifyResult::Valid { path, profile } => {
+                writeln!(f, "[OK]\t{}/sver.toml:[{}]", path, profile)
+            }
+            VerifyResult::Invalid {
+                path,
+                profile,
+                invalid_dependencies,
+                invalid_excludes,
+            } => {
+                writeln!(f, "[NG]\t{}/sver.toml:[{}]", path, profile)?;
+                writeln!(f, "\t\tinvalid_dependency:{:?}", invalid_dependencies)?;
+                writeln!(f, "\t\tinvalid_exclude:{:?}", invalid_excludes)
+            }
+        }
     }
 }
 
@@ -124,19 +159,15 @@ impl ProfileConfig {
             .ok_or_else(|| format!("profile[{}] is not found", profile).into())
     }
 
-    pub(crate) fn verify(
-        &self,
-        path: &str,
-        repo: &Repository,
-    ) -> Result<Option<VerifyResult>, Box<dyn Error>> {
-        let mut result = VerifyResult::default();
+    pub(crate) fn verify(&self, path: &str, profile: &str, index: &Index) -> VerifyResult {
+        let mut result = InnerVerifyResult::default();
 
         result
             .invalid_dependencies
             .extend(self.dependencies.clone());
         result.invalid_excludes.extend(self.excludes.clone());
 
-        for entry in repo.index()?.iter() {
+        for entry in index.iter() {
             result.invalid_dependencies.retain(|dependency| {
                 !match_samefile_or_include_dir(&entry.path, dependency.as_bytes())
             });
@@ -162,9 +193,17 @@ impl ProfileConfig {
         debug!("path:{}, verify_result:{:?}", path, result);
 
         if result.is_empty() {
-            Ok(None)
+            VerifyResult::Valid {
+                path: path.to_string(),
+                profile: profile.to_string(),
+            }
         } else {
-            Ok(Some(result))
+            VerifyResult::Invalid {
+                path: path.to_string(),
+                profile: profile.to_string(),
+                invalid_excludes: result.invalid_excludes.clone(),
+                invalid_dependencies: result.invalid_dependencies.clone(),
+            }
         }
     }
 }

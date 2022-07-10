@@ -1,6 +1,6 @@
 mod test_tool;
 
-use sver::{calc_version, list_sources};
+use sver::{calc_version, list_sources, sver_config::VerifyResult, verify_sver_config};
 
 use crate::test_tool::{
     add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
@@ -302,4 +302,172 @@ fn has_symlink_dir() {
         version.version,
         "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
     );
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → dependency = [ "service1/hello.txt" ]
+#[test]
+fn valid_dependencies_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blog(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"service1/hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let target_path = &calc_target_path(&repo, "service2");
+
+    // exercise
+    let mut result = verify_sver_config(&target_path).unwrap();
+
+    // verify
+    assert_eq!(result.len(), 1);
+    if let Some(VerifyResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → dependency = [ "service1/hello-hello.txt" ]
+#[test]
+fn invalid_dependencies_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blog(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"service1/hello-hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let target_path = &calc_target_path(&repo, "service2");
+
+    // exercise
+    let mut result = verify_sver_config(&target_path).unwrap();
+
+    // verify
+    assert_eq!(result.len(), 1);
+    if let Some(VerifyResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        invalid_excludes,
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+        assert_eq!(invalid_dependencies, vec!["service1/hello-hello.txt"]);
+        assert!(invalid_excludes.is_empty());
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service1/sver.toml → excludes = [ "hello.txt" ]
+#[test]
+fn valid_excludes_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blog(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        excludes = [
+            \"hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let target_path = &calc_target_path(&repo, "service1");
+
+    // exercise
+    let mut result = verify_sver_config(&target_path).unwrap();
+
+    // verify
+    assert_eq!(result.len(), 1);
+    if let Some(VerifyResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service1");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service1/sver.toml → excludes = [ "hello-hello.txt" ]
+#[test]
+fn invalid_excludes_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blog(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        excludes = [
+            \"hello-hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let target_path = &calc_target_path(&repo, "service1");
+
+    // exercise
+    let mut result = verify_sver_config(&target_path).unwrap();
+
+    // verify
+    assert_eq!(result.len(), 1);
+    if let Some(VerifyResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        invalid_excludes,
+    }) = result.pop()
+    {
+        assert_eq!(path, "service1");
+        assert_eq!(profile, "default");
+        assert!(invalid_dependencies.is_empty());
+        assert_eq!(invalid_excludes, vec!["hello-hello.txt"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
 }
