@@ -58,6 +58,7 @@ pub fn add_submodule(
     path: &str,
     commit_hash: &str,
 ) {
+    let mut index = repo.index().unwrap();
     let path_obj = Path::new(path);
     let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
     submodule.clone(None).unwrap();
@@ -66,6 +67,8 @@ pub fn add_submodule(
     submodule_repo
         .set_head_detached(Oid::from_str(commit_hash).unwrap())
         .unwrap();
+    index.add_path(Path::new(path)).unwrap();
+    index.write().unwrap();
 }
 
 pub fn commit(repo: &Repository, commit_message: &str) {
