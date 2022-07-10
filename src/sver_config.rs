@@ -115,7 +115,7 @@ impl InnerVerifyResult {
 }
 
 #[derive(Debug)]
-pub(crate) enum VerifyResult {
+pub enum VerifyResult {
     Valid {
         path: String,
         profile: String,
