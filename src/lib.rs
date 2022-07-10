@@ -36,7 +36,7 @@ pub fn init_sver_config(path: &str) -> Result<String, Box<dyn Error>> {
     Ok(format!("sver.toml is generated. path:{}", path))
 }
 
-pub fn verify_sver_config(path : &str) -> Result<Vec<VerifyResult>, Box<dyn Error>> {
+pub fn verify_sver_config(path: &str) -> Result<Vec<VerifyResult>, Box<dyn Error>> {
     let ResolvePathResult { repo, .. } = resolve_target_repo_and_path(path)?;
     let configs = SverConfig::load_all_configs(&repo)?;
     configs
@@ -49,9 +49,7 @@ pub fn verify_sver_config(path : &str) -> Result<Vec<VerifyResult>, Box<dyn Erro
             let target_path = sver_config.target_path.clone();
             sver_config
                 .iter()
-                .map(|(profile, config)| {
-                    config.verify(&target_path, profile, &index)
-                })
+                .map(|(profile, config)| config.verify(&target_path, profile, &index))
                 .collect::<Vec<VerifyResult>>()
         })
         .collect();
