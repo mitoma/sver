@@ -77,11 +77,19 @@ sver validate
 
 ## Config
 
-By placing a configuration file, you can add dependent directories and files to the directory to be calculated.
+By placing a `sver.toml` file, you can add dependent directories and files to the directory to be calculated.
+
+`sver.toml` is a configuration file for defining directory dependencies.
+
+| key                      | notes                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| <profile>                | Profile. Only the fixed value "default".                                     |
+| <profile>.dependencies[] | Dependency files of directories. Set relative path from **repository root**. |
+| <profile>.excludes[]     | Exclude files of directories.  Set relative path from **target directory**   |
 
 **example1**
 
-service1 depends on lib1 directory
+service1 depends on lib1 directory.
 
 ```sh
 .
@@ -106,7 +114,7 @@ excludes = []
 
 **example2**
 
-service1 ignore service1/doc directory
+service1 ignore service1/doc directory.
 
 ```sh
 .
