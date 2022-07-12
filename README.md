@@ -2,11 +2,11 @@
 
 Version calcurator based on source code.
 
-## description
+## Description
 
-sver is small cli command for calucurate version based on source code of git repository.
+`sver` is small cli command for calucurate version based on source code of git repository.
 
-## usage
+## Usage
 
 ### Calcurate version of directory on git repository
 
@@ -73,4 +73,62 @@ sver validate
 [OK]    testdata/lib2/sver.toml:[default]
 [OK]    testdata/service1/sver.toml:[default]
 [OK]    testdata/service2/sver.toml:[default]
+```
+
+## Config
+
+By placing a configuration file, you can add dependent directories and files to the directory to be calculated.
+
+**example1**
+
+service1 depends on lib1 directory
+
+```sh
+.
+├── README.md
+├── libs1
+│   └── lib.rs
+└── service1
+     ├── main.rs
+     └── sver.toml (1)
+```
+
+sver.toml (1)
+
+```toml
+[default]
+# path from the root
+dependencies = [
+  "lib1",
+]
+excludes = []
+```
+
+**example2**
+
+service1 ignore service1/doc directory
+
+```sh
+.
+├── README.md
+├── libs1
+│   └── lib.rs
+└── service1
+     ├── main.rs
+     ├── sver.toml (2)
+     └── doc
+          └── design.md
+```
+
+sver.toml (2)
+
+```toml
+[default]
+dependencies = [
+  "lib1",
+]
+# path from the service1 directory
+excludes = [
+  "doc",
+]
 ```
