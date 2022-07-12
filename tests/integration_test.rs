@@ -1,6 +1,6 @@
 mod test_tool;
 
-use sver::{calc_version, list_sources, sver_config::VerifyResult, verify_sver_config};
+use sver::{calc_version, list_sources, sver_config::ValidationResult, validate_sver_config};
 
 use crate::test_tool::{
     add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
@@ -330,11 +330,11 @@ fn valid_dependencies_repository() {
     let target_path = &calc_target_path(&repo, "service2");
 
     // exercise
-    let mut result = verify_sver_config(&target_path).unwrap();
+    let mut result = validate_sver_config(&target_path).unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(VerifyResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -368,11 +368,11 @@ fn invalid_dependencies_repository() {
     let target_path = &calc_target_path(&repo, "service2");
 
     // exercise
-    let mut result = verify_sver_config(&target_path).unwrap();
+    let mut result = validate_sver_config(&target_path).unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(VerifyResult::Invalid {
+    if let Some(ValidationResult::Invalid {
         path,
         profile,
         invalid_dependencies,
@@ -414,11 +414,11 @@ fn valid_excludes_repository() {
     let target_path = &calc_target_path(&repo, "service1");
 
     // exercise
-    let mut result = verify_sver_config(&target_path).unwrap();
+    let mut result = validate_sver_config(&target_path).unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(VerifyResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
         assert_eq!(path, "service1");
         assert_eq!(profile, "default");
     } else {
@@ -452,11 +452,11 @@ fn invalid_excludes_repository() {
     let target_path = &calc_target_path(&repo, "service1");
 
     // exercise
-    let mut result = verify_sver_config(&target_path).unwrap();
+    let mut result = validate_sver_config(&target_path).unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(VerifyResult::Invalid {
+    if let Some(ValidationResult::Invalid {
         path,
         profile,
         invalid_dependencies,

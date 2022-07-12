@@ -14,8 +14,10 @@ pub(crate) enum Commands {
         /// target paths
         paths: Vec<String>,
 
+        /// format of calucuration result
         #[clap(arg_enum, short, long, default_value = "version-only")]
         output: OutputFormat,
+        /// length of version
         #[clap(arg_enum, short, long, default_value = "short")]
         length: VersionLength,
     },
@@ -33,8 +35,8 @@ pub(crate) enum Commands {
         path: String,
     },
 
-    /// verify all config files in repository
-    Verify,
+    /// validate all config files in repository
+    Validate,
 }
 
 #[derive(Debug, Clone, clap::ArgEnum)]

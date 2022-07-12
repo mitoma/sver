@@ -103,19 +103,19 @@ impl SverConfig {
 }
 
 #[derive(Default, Debug)]
-struct InnerVerifyResult {
+struct InnerValidationResult {
     pub(crate) invalid_excludes: Vec<String>,
     pub(crate) invalid_dependencies: Vec<String>,
 }
 
-impl InnerVerifyResult {
+impl InnerValidationResult {
     fn is_empty(&self) -> bool {
         self.invalid_dependencies.is_empty() && self.invalid_excludes.is_empty()
     }
 }
 
 #[derive(Debug)]
-pub enum VerifyResult {
+pub enum ValidationResult {
     Valid {
         path: String,
         profile: String,
@@ -128,13 +128,13 @@ pub enum VerifyResult {
     },
 }
 
-impl Display for VerifyResult {
+impl Display for ValidationResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            VerifyResult::Valid { path, profile } => {
+            ValidationResult::Valid { path, profile } => {
                 writeln!(f, "[OK]\t{}/sver.toml:[{}]", path, profile)
             }
-            VerifyResult::Invalid {
+            ValidationResult::Invalid {
                 path,
                 profile,
                 invalid_dependencies,
@@ -159,8 +159,8 @@ impl ProfileConfig {
             .ok_or_else(|| format!("profile[{}] is not found", profile).into())
     }
 
-    pub(crate) fn verify(&self, path: &str, profile: &str, index: &Index) -> VerifyResult {
-        let mut result = InnerVerifyResult::default();
+    pub(crate) fn validate(&self, path: &str, profile: &str, index: &Index) -> ValidationResult {
+        let mut result = InnerValidationResult::default();
 
         result
             .invalid_dependencies
@@ -190,15 +190,15 @@ impl ProfileConfig {
             });
         }
 
-        debug!("path:{}, verify_result:{:?}", path, result);
+        debug!("path:{}, validation_result:{:?}", path, result);
 
         if result.is_empty() {
-            VerifyResult::Valid {
+            ValidationResult::Valid {
                 path: path.to_string(),
                 profile: profile.to_string(),
             }
         } else {
-            VerifyResult::Invalid {
+            ValidationResult::Invalid {
                 path: path.to_string(),
                 profile: profile.to_string(),
                 invalid_excludes: result.invalid_excludes.clone(),
