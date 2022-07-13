@@ -40,7 +40,8 @@ GitHub Actions で同じビルドやテストを何度も実行しない方法�
 
 ![同じリビジョンならリビルド不要](build-dup.drawio.svg)
 
-あるいは、リポジトリ上の README.md やドキュメントを編集したときにビルドやテストなどの CI が走っても無駄なことが多いでしょう。
+あるいは、リポジトリ上の README.md やドキュメントを編集したときにビルドやテストなどの CI が走っても無駄なことが多いでしょう。  
+事前にジョブの実行が無駄なのが明らかなケースでは `[skip ci]` などのコミットコメントで抑制することもできますが、自明なケースは限られています。
 
 **注釈** 同じソースコードに対して複数回ジョブを流すことが無駄と言えるのはジョブに再現性がある場合です。  
 再現性があるとは、同じ入力(ソースコードや環境)であれば何度そのジョブを流しても同じ結果になるという事です。  
@@ -48,8 +49,8 @@ GitHub Actions で同じビルドやテストを何度も実行しない方法�
 
 ## 同じ入力に対して一意なラベルをつけよう
 
-ジョブに再現性があるという前提の下では、過去のビルド結果を保存しておけばそのジョブはスキップ可能です。  
-ですが、過去のビルドと現在のビルドは同じものかどのように照合すればよいでしょう。
+ジョブに再現性があるという前提の下では、過去のジョブの結果を保存しておけばそのジョブはスキップ可能です。  
+ですが、過去のジョブと現在のジョブは同じものかどのように照合すればよいでしょう。
 
 これは、ジョブの入力に対して一意なラベルをつけることで照合可能です。  
 ジョブの入力とは、そのジョブで使われるソースコード一式とジョブが実行される環境です。  
@@ -62,15 +63,15 @@ GitHub Actions などリポジトリにジョブの定義ファイルを配置�
 ![この2つに同じラベルを付けたい](add-label.drawio.svg)
 
 簡易的にはツリーオブジェクトのハッシュ値を用いる方法があります。`git rev-parse HEAD^{tree}` で計算可能です。  
-["同じソースツリーでテストが通っていたらテストをスキップする"][skip-test-blog] というブログでも git コマンドと S3 を用いる方法が紹介されています。
+songmu さんの ["同じソースツリーでテストが通っていたらテストをスキップする"][skip-test-blog] というブログでも git コマンドと S3 を用いる方法が紹介されています。
 
 この方法を用いると、ブランチ違いの同一ジョブ、push・pull-request といったイベント違いの同一ジョブの実行を抑制することができます。
 
 ただし、ジョブの成果物に影響のない変更でもハッシュが変わってしまうため、ドキュメントをリポジトリに入れていたり、monorepo のように多数のサービスが含まれるリポジトリでは `git rev-parse HEAD^{tree}` でも十分ではありません。
 
-ジョブごとにビルドに関係するファイル `echo <ビルドに使われるファイルのリスト> | xargs -I@ cat "@" | sha256sum` のような処理でハッシュ値を計算することで、リビジョンやブランチに左右されないそのジョブ固有の値が得られます。
+`echo <ジョブに使われるファイルのリスト> | xargs -I@ cat "@" | sha256sum` のような処理でハッシュ値を計算することで、リビジョンやブランチに左右されないそのジョブ固有の値が得られます。
 
-しかし `<ビルドに使われるファイルのリスト>` を洗い出してハッシュ値を計算するのは面倒です。  
+しかし `<ジョブに使われるファイルのリスト>` を洗い出してハッシュ値を計算するのは面倒です。  
 そちらを簡略化する方法についてはツール[sver][]を後述します。
 
 ## 実行結果のラベルを artifact として保存しよう
@@ -93,8 +94,8 @@ GitHub Actions では artifact の保存期限は最長 90 日なので、それ
 
 ## この方法の良いところ、悪いところ
 
-この方法は、大規模で効率的なビルドをするなら Bazel が良いかもしれない。  
-けれど Bazel を採用するには大げさかもしれない。しかしビルドやテストを毎回行いたくない…。  
+この方法は、大規模で効率的なビルドをするなら [Bazel][] が良いかもしれない。  
+けれど [Bazel][] を採用するには大げさかもしれない。しかしビルドやテストを毎回行いたくない…。  
 という要求が発端で生まれました。
 
 やっていることは単にあるファイル群から一意なハッシュ値を計算するだけです。  
@@ -163,7 +164,7 @@ git ls-files | xargs -I@ cat "@"  | sha256sum
 ### ハッシュ値計算ツール sver
 
 このようなハッシュ値計算の問題を解決するためのツールが [sver][] です。  
-サイボウズ社のグローバル向けAWS版kintone開発チームの社内ツールをアイデアを元に個人の OSS として開発されています。
+サイボウズ社の [グローバル向けAWS版kintone開発チーム][] の社内ツールをアイデアを元に個人の OSS として開発されています。
 
 [sver][] は小さな rust 製のコマンドラインツールで git リポジトリのファイルのハッシュ値を計算できます。  
 「ソースコードから一意なバージョンを作る」という意味を込めて "Source VERsion" → "sver" としています。  
@@ -220,6 +221,10 @@ GitHub Actions で sver コマンドをインストールするには [setup_sve
 
 詳細や現在の開発状況についてはリポジトリ https://github.com/mitoma/sver をご参照ください。
 
+### Altanative
+
+[sver][] や [Bazel][] 以外の monorepo の課題を解決するためのツールについては [monorepo.tools][] や [awesome-monorepo][] などを参照するとよいでしょう。
+
 [sver]: https://github.com/mitoma/sver
 [skip-test-blog]: https://songmu.jp/riji/entry/2021-03-08-utilize-git-tree-hash-in-testing.html
 [グローバル向けAWS版kintone開発チーム]: https://cybozu.co.jp/recruit/entry/career/aws-kintone.html
@@ -227,3 +232,7 @@ GitHub Actions で sver コマンドをインストールするには [setup_sve
 [setup_sver/action.yaml]: https://github.com/mitoma/sver/blob/744d02a956c704747fe49b3454879ebbb1c269a2/.github/actions/setup_sver/action.yaml
 [exec_sver/action.yaml]: https://github.com/mitoma/sver/blob/744d02a956c704747fe49b3454879ebbb1c269a2/.github/actions/exec_sver/action.yaml
 [ci.yaml]:https://github.com/mitoma/sver/blob/744d02a956c704747fe49b3454879ebbb1c269a2/.github/workflows/ci.yaml#L28-L48
+
+[Bazel]: https://bazel.build/
+[monorepo.tools]: https://monorepo.tools/
+[awesome-monorepo]: https://github.com/korfuri/awesome-monorepo#build-systems--dependency-management-tools
