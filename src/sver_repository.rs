@@ -9,10 +9,11 @@ use log::debug;
 use sha2::{Digest, Sha256};
 
 use crate::{
+    containable,
     filemode::FileMode,
-    find_repository, relative_path,
-    sver_config::{SverConfig, ValidationResult, ProfileConfig},
-    OidAndMode, Version, containable, OS_SEP_STR, SEPARATOR_STR,
+    find_repository, relative_path, split_path_and_profile,
+    sver_config::{ProfileConfig, SverConfig, ValidationResult},
+    OidAndMode, Version, OS_SEP_STR, SEPARATOR_STR,
 };
 
 pub struct SverRepository {
@@ -24,7 +25,9 @@ pub struct SverRepository {
 
 impl SverRepository {
     pub fn new(path: &str) -> Result<Self, Box<dyn Error>> {
-        let target_path = Path::new(path);
+        let (path, profile) = split_path_and_profile(path)?;
+
+        let target_path = Path::new(&path);
         let repo = find_repository(target_path)?;
         let target_path = relative_path(&repo, target_path)?;
         let target_path = target_path
@@ -43,7 +46,7 @@ impl SverRepository {
             repo,
             work_dir,
             target_path,
-            profile: "default".to_string(),
+            profile,
         })
     }
 

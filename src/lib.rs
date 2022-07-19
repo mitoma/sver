@@ -17,6 +17,15 @@ pub struct Version {
     pub version: String,
 }
 
+fn split_path_and_profile(value: &str) -> Result<(String, String), Box<dyn Error>> {
+    let arg_values: Vec<&str> = value.split(':').collect();
+    match arg_values.as_slice() {
+        [path] => Ok((path.to_string(), "default".into())),
+        [path, profile] => Ok((path.to_string(), profile.to_string())),
+        _ => Err(format!("invalid arg value. value:{}", value).into()),
+    }
+}
+
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
     let repo_path = repo
         .workdir()
