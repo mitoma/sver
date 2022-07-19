@@ -1,6 +1,6 @@
 mod test_tool;
 
-use sver::{calc_version, list_sources, sver_config::ValidationResult, validate_sver_config};
+use sver::{sver_config::ValidationResult, SverRepository};
 
 use crate::test_tool::{
     add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
@@ -21,11 +21,11 @@ fn simple_repository() {
     add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
@@ -49,11 +49,11 @@ fn has_blob_executable() {
     add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
@@ -86,11 +86,11 @@ fn has_dependencies_repository() {
     );
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "service2");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec!["service1/hello.txt", "service2/sver.toml"]);
@@ -133,11 +133,11 @@ fn cyclic_repository() {
     commit(&repo, "setup");
 
     {
-        let target_path = &calc_target_path(&repo, "service1");
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
 
         // exercise
-        let sources = list_sources(target_path).unwrap();
-        let version = calc_version(target_path).unwrap();
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
 
         // verify
         assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
@@ -147,11 +147,11 @@ fn cyclic_repository() {
         );
     }
     {
-        let target_path = &calc_target_path(&repo, "service2");
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
         // exercise
-        let sources = list_sources(target_path).unwrap();
-        let version = calc_version(target_path).unwrap();
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
 
         // verify
         assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
@@ -188,11 +188,11 @@ fn has_exclude_repository() {
     add_blog(&repo, "doc/README.txt", "README".as_bytes());
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec!["hello.txt", "sver.toml"]);
@@ -220,11 +220,11 @@ fn has_submodule() {
 
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec![".gitmodules", "bano"]);
@@ -250,11 +250,11 @@ fn has_symlink_single() {
     add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "linkdir");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "linkdir")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(sources, vec!["linkdir/symlink", "original/README.txt"]);
@@ -283,11 +283,11 @@ fn has_symlink_dir() {
     add_symlink(&repo, "linkdir/symlink", "../original");
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "linkdir");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "linkdir")).unwrap();
 
     // exercise
-    let sources = list_sources(target_path).unwrap();
-    let version = calc_version(target_path).unwrap();
+    let sources = sver_repo.list_sources().unwrap();
+    let version = sver_repo.calc_version().unwrap();
 
     // verify
     assert_eq!(
@@ -327,10 +327,10 @@ fn valid_dependencies_repository() {
     );
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "service2");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let mut result = validate_sver_config(&target_path).unwrap();
+    let mut result = sver_repo.validate_sver_config().unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
@@ -365,10 +365,10 @@ fn invalid_dependencies_repository() {
     );
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "service2");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let mut result = validate_sver_config(&target_path).unwrap();
+    let mut result = sver_repo.validate_sver_config().unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
@@ -411,10 +411,10 @@ fn valid_excludes_repository() {
     );
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "service1");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
 
     // exercise
-    let mut result = validate_sver_config(&target_path).unwrap();
+    let mut result = sver_repo.validate_sver_config().unwrap();
 
     // verify
     assert_eq!(result.len(), 1);
@@ -449,10 +449,10 @@ fn invalid_excludes_repository() {
     );
     commit(&repo, "setup");
 
-    let target_path = &calc_target_path(&repo, "service1");
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
 
     // exercise
-    let mut result = validate_sver_config(&target_path).unwrap();
+    let mut result = sver_repo.validate_sver_config().unwrap();
 
     // verify
     assert_eq!(result.len(), 1);

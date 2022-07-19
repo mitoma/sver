@@ -7,7 +7,7 @@ use crate::cli::outputs::format_versions;
 use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
 use log::debug;
-use sver::{calc_version, init_sver_config, list_sources, validate_sver_config, Version};
+use sver::{SverRepository, Version};
 
 fn main() -> ExitCode {
     env_logger::init();
@@ -45,24 +45,28 @@ fn calc(
     debug!("paths:{:?}", paths);
     let versions = paths
         .iter()
-        .map(|p| crate::calc_version(p))
+        .map(|p| SverRepository::new(p)?.calc_version())
         .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
     println!("{}", format_versions(&versions, output, length)?);
     Ok(())
 }
 
 fn list(path: &str) -> Result<(), Box<dyn Error>> {
-    list_sources(path)?.iter().for_each(|s| println!("{}", s));
+    SverRepository::new(path)?
+        .list_sources()?
+        .iter()
+        .for_each(|s| println!("{}", s));
     Ok(())
 }
 
 fn init(path: &str) -> Result<(), Box<dyn Error>> {
-    println!("{}", init_sver_config(path)?);
+    println!("{}", SverRepository::new(path)?.init_sver_config()?);
     Ok(())
 }
 
 fn validate() -> Result<(), Box<dyn Error>> {
-    validate_sver_config(".")?
+    SverRepository::new(".")?
+        .validate_sver_config()?
         .iter()
         .for_each(|s| print!("{}", s));
     Ok(())
