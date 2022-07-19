@@ -7,7 +7,7 @@ use crate::cli::outputs::format_versions;
 use self::cli::args::{Args, Commands, OutputFormat, VersionLength};
 use clap::Parser;
 use log::debug;
-use sver::{SverRepository, Version};
+use sver::{sver_repository::SverRepository, Version};
 
 fn main() -> ExitCode {
     env_logger::init();

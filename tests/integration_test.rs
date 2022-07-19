@@ -1,6 +1,6 @@
 mod test_tool;
 
-use sver::{sver_config::ValidationResult, SverRepository};
+use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
 
 use crate::test_tool::{
     add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
