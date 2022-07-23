@@ -1,0 +1,11 @@
+[default]
+dependencies = []
+excludes = []
+
+[ref-profile1]
+dependencies = ["testdata/multiprofile1"]
+excludes = []
+
+[ref-profile2]
+dependencies = ["testdata/multiprofile1:other-profile"]
+excludes = []
