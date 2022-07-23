@@ -18,7 +18,7 @@ env_logger = "0.9"
 regex = "1.6"
 
 [dev-dependencies.uuid]
-version = "1.0"
+version = "1.1"
 features = [
     "v4",                # Lets you generate random UUIDs
     "fast-rng",          # Use a faster (but still sufficiently random) RNG
