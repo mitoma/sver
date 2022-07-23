@@ -3,7 +3,7 @@ mod test_tool;
 use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
 
 use crate::test_tool::{
-    add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path,
+    add_blob, add_blob_executable, add_submodule, add_symlink, calc_target_path,
     calc_target_path_with_profile, commit, initialize, setup_test_repository,
 };
 
@@ -17,8 +17,8 @@ fn simple_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "hello.txt", "hello world!".as_bytes());
-    add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+    add_blob(&repo, "hello.txt", "hello world!".as_bytes());
+    add_blob(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -45,8 +45,8 @@ fn has_blob_executable() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog_executable(&repo, "hello.txt", "hello world!".as_bytes());
-    add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+    add_blob_executable(&repo, "hello.txt", "hello world!".as_bytes());
+    add_blob(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -73,8 +73,8 @@ fn has_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -110,7 +110,7 @@ fn cyclic_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
@@ -120,7 +120,7 @@ fn cyclic_repository() {
         ]"
         .as_bytes(),
     );
-    add_blog(
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -174,8 +174,8 @@ fn has_exclude_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "hello.txt", "hello".as_bytes());
-    add_blog(
+    add_blob(&repo, "hello.txt", "hello".as_bytes());
+    add_blob(
         &repo,
         "sver.toml",
         "
@@ -185,7 +185,7 @@ fn has_exclude_repository() {
         ]"
         .as_bytes(),
     );
-    add_blog(&repo, "doc/README.txt", "README".as_bytes());
+    add_blob(&repo, "doc/README.txt", "README".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -246,7 +246,7 @@ fn has_symlink_single() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
     add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
     commit(&repo, "setup");
 
@@ -277,8 +277,8 @@ fn has_symlink_dir() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
-    add_blog(&repo, "original/Sample.txt", "sample".as_bytes());
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_blob(&repo, "original/Sample.txt", "sample".as_bytes());
 
     add_symlink(&repo, "linkdir/symlink", "../original");
     commit(&repo, "setup");
@@ -315,9 +315,9 @@ fn multiprofile() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "test1.txt", "hello".as_bytes());
-    add_blog(&repo, "test2.txt", "world".as_bytes());
-    add_blog(
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "test2.txt", "world".as_bytes());
+    add_blob(
         &repo,
         "sver.toml",
         "
@@ -377,9 +377,9 @@ fn multiprofile_multidir() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "lib1/test1.txt", "hello".as_bytes());
-    add_blog(&repo, "lib1/test2.txt", "world".as_bytes());
-    add_blog(
+    add_blob(&repo, "lib1/test1.txt", "hello".as_bytes());
+    add_blob(&repo, "lib1/test2.txt", "world".as_bytes());
+    add_blob(
         &repo,
         "lib1/sver.toml",
         "
@@ -391,7 +391,7 @@ fn multiprofile_multidir() {
         ]"
         .as_bytes(),
     );
-    add_blog(
+    add_blob(
         &repo,
         "lib2/sver.toml",
         "
@@ -488,8 +488,8 @@ fn valid_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -526,8 +526,8 @@ fn invalid_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -572,8 +572,8 @@ fn valid_excludes_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
@@ -610,8 +610,8 @@ fn invalid_excludes_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
