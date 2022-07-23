@@ -10,6 +10,7 @@ use std::{
 
 use self::filemode::FileMode;
 use git2::{Oid, Repository};
+use regex::Regex;
 
 pub struct Version {
     pub repository_root: String,
@@ -17,13 +18,16 @@ pub struct Version {
     pub version: String,
 }
 
-fn split_path_and_profile(value: &str) -> Result<(String, String), Box<dyn Error>> {
-    let arg_values: Vec<&str> = value.split(':').collect();
-    match arg_values.as_slice() {
-        [path] => Ok((path.to_string(), "default".into())),
-        [path, profile] => Ok((path.to_string(), profile.to_string())),
-        _ => Err(format!("invalid arg value. value:{}", value).into()),
-    }
+fn split_path_and_profile(value: &str) -> (String, String) {
+    let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
+    let caps = regex.captures(value);
+    caps.map(|caps| {
+        (
+            caps.get(1).unwrap().as_str().to_string(),
+            caps.get(2).unwrap().as_str().to_string(),
+        )
+    })
+    .unwrap_or((value.to_string(), "default".to_string()))
 }
 
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
@@ -82,4 +86,29 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
         }
     }
     Err("repository was not found".into())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::split_path_and_profile;
+
+    #[test]
+    fn test_split() {
+        assert_eq!(
+            split_path_and_profile("hello"),
+            ("hello".to_string(), "default".to_string())
+        );
+        assert_eq!(
+            split_path_and_profile("hello:world"),
+            ("hello".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            split_path_and_profile(r"c:\hello"),
+            (r"c:\hello".to_string(), "default".to_string())
+        );
+        assert_eq!(
+            split_path_and_profile(r"c:\hello:world-wide"),
+            (r"c:\hello".to_string(), "world-wide".to_string())
+        );
+    }
 }

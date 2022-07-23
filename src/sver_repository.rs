@@ -25,7 +25,7 @@ pub struct SverRepository {
 
 impl SverRepository {
     pub fn new(path: &str) -> Result<Self, Box<dyn Error>> {
-        let (path, profile) = split_path_and_profile(path)?;
+        let (path, profile) = split_path_and_profile(path);
 
         let target_path = Path::new(&path);
         let repo = find_repository(target_path)?;

@@ -516,6 +516,7 @@ dependencies = [
  "git2",
  "libgit2-sys",
  "log",
+ "regex",
  "serde",
  "serde_json",
  "sha2",
