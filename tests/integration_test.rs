@@ -367,6 +367,119 @@ fn multiprofile() {
 
 // repo layout
 // .
+// + lib1/test1.txt
+// + lib1/test2.txt
+// + lib1/sver.toml → [default] no setting, [prof1] excludes = ["test2.txt"]
+// + lib2/sver.toml → [default] no setting, [prof2] dependency = ["lib1:prof1"], [prof3] dependency = ["lib1/test2.txt"]
+#[test]
+fn multiprofile_multidir() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "lib1/test1.txt", "hello".as_bytes());
+    add_blog(&repo, "lib1/test2.txt", "world".as_bytes());
+    add_blog(
+        &repo,
+        "lib1/sver.toml",
+        "
+        [default]
+        
+        [prof1]
+        excludes = [
+            \"test2.txt\",
+        ]"
+        .as_bytes(),
+    );
+    add_blog(
+        &repo,
+        "lib2/sver.toml",
+        "
+        [default]
+        
+        [prof2]
+        dependencies = [
+            \"lib1:prof1\",
+        ]
+
+        [prof3]
+        dependencies = [
+            \"lib1/test2.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec!["lib1/sver.toml", "lib1/test1.txt", "lib1/test2.txt"]
+        );
+        assert_eq!(
+            version.version,
+            "625de0221f168df0fb590ab28e69c8b5bc94ec61f5b1909aaae8491a0d9fa0c7"
+        );
+    }
+    // prof1
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib1:prof1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["lib1/sver.toml", "lib1/test1.txt"]);
+        assert_eq!(
+            version.version,
+            "54a9168b93cba5a8ff2a1f4e65cc2f54f583aabf3cb702694884877452670447"
+        );
+    }
+    // prof2
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib2:prof2")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec!["lib1/sver.toml", "lib1/test1.txt", "lib2/sver.toml"]
+        );
+        assert_eq!(
+            version.version,
+            "839406ee976956c4d381626e5b2afd37e2b99caacfc850f5082347ec78fb0c4b"
+        );
+    }
+    // prof2
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib2:prof3")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["lib1/test2.txt", "lib2/sver.toml"]);
+        assert_eq!(
+            version.version,
+            "41fbde4b67787d4efd190b3c90a56163cc582159d6b5696e733a649dd154b231"
+        );
+    }
+}
+
+// repo layout
+// .
 // + service1/hello.txt
 // + service2/sver.toml → dependency = [ "service1/hello.txt" ]
 #[test]
