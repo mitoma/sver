@@ -81,7 +81,9 @@ impl SverRepository {
                 let target_path = sver_config.target_path.clone();
                 sver_config
                     .iter()
-                    .map(|(profile, config)| config.validate(&target_path, profile, &index))
+                    .map(|(profile, config)| {
+                        config.validate(&target_path, profile, &index, &self.repo)
+                    })
                     .collect::<Vec<ValidationResult>>()
             })
             .collect();

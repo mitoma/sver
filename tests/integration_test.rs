@@ -1,5 +1,6 @@
 mod test_tool;
 
+use log::debug;
 use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
 
 use crate::test_tool::{
@@ -641,6 +642,235 @@ fn invalid_excludes_repository() {
         assert_eq!(profile, "default");
         assert!(invalid_dependencies.is_empty());
         assert_eq!(invalid_excludes, vec!["hello-hello.txt"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → [prof1] dependency = [ "service1/hello.txt" ]
+#[test]
+fn valid_has_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof1]
+        dependencies = [
+            \"service1/hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    assert_eq!(result.len(), 2);
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof1");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → [prof1] dependency = [ "service1/hello.txt" ]
+#[test]
+fn invalid_has_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof1]
+        dependencies = [
+            \"service1/helloo.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    assert_eq!(result.len(), 2);
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof1");
+        assert_eq!(invalid_dependencies, vec!["service1/helloo.txt"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/sver.toml → [prof1]
+// + service2/sver.toml → [prof2] dependency = [ "service1:prof1" ]
+#[test]
+fn valid_no_target_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        [prof1]
+        "
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof2]
+        dependencies = [
+            \"service1:prof1\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.len(), 4);
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof2");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/sver.toml → [prof1]
+// + service2/sver.toml → [prof2] dependency = [ "service1:prof1" ]
+#[test]
+fn invalid_no_target_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        [prof1]
+        "
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof2]
+        dependencies = [
+            \"service1:prof999\",
+        ]
+        [prof3]
+        dependencies = [
+            \"service1/:prof999\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.len(), 5);
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof3");
+        assert_eq!(invalid_dependencies, vec!["service1/:prof999"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof2");
+        assert_eq!(invalid_dependencies, vec!["service1:prof999"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
     } else {
         assert!(false, "this line will not be execute");
     }
