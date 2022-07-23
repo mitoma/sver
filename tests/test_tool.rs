@@ -117,3 +117,9 @@ pub fn calc_target_path(repo: &Repository, path: &str) -> String {
     path_buf.push(path);
     path_buf.to_str().unwrap().into()
 }
+
+pub fn calc_target_path_with_profile(repo: &Repository, path: &str, profile: &str) -> String {
+    let mut path_buf = repo.workdir().unwrap().to_path_buf();
+    path_buf.push(path);
+    format!("{}:{}", path_buf.to_str().unwrap(), profile)
+}

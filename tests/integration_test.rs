@@ -3,8 +3,8 @@ mod test_tool;
 use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
 
 use crate::test_tool::{
-    add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
-    initialize, setup_test_repository,
+    add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path,
+    calc_target_path_with_profile, commit, initialize, setup_test_repository,
 };
 
 // repo layout
@@ -302,6 +302,67 @@ fn has_symlink_dir() {
         version.version,
         "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
     );
+}
+
+// repo layout
+// .
+// + test1.txt
+// + test2.txt
+// + sver.toml → [default] no setting, [prof1] exclude test1.txt
+#[test]
+fn multiprofile() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blog(&repo, "test1.txt", "hello".as_bytes());
+    add_blog(&repo, "test2.txt", "world".as_bytes());
+    add_blog(
+        &repo,
+        "sver.toml",
+        "
+        [default]
+        
+        [prof1]
+        excludes = [
+            \"test1.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["sver.toml", "test1.txt", "test2.txt"]);
+        assert_eq!(
+            version.version,
+            "f772ad1c8b70ee288c36242ce482e885d9cb0dc49f32a5c92bcad607ebe2eb23"
+        );
+    }
+
+    // prof1
+    {
+        let sver_repo =
+            SverRepository::new(&calc_target_path_with_profile(&repo, ".", "prof1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["sver.toml", "test2.txt"]);
+        assert_eq!(
+            version.version,
+            "bcc2d5c8ba9152fb12532033792c6a20d4d07a551e40477c424467c97366003a"
+        );
+    }
 }
 
 // repo layout
