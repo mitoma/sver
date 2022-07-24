@@ -81,11 +81,11 @@ By placing a `sver.toml` file, you can add dependent directories and files to th
 
 `sver.toml` is a configuration file for defining directory dependencies.
 
-| key                      | notes                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------- |
-| <profile>                | Profile. Only the fixed value "default".                                     |
-| <profile>.dependencies[] | Dependency files of directories. Set relative path from **repository root**. |
-| <profile>.excludes[]     | Exclude files of directories.  Set relative path from **target directory**   |
+| key                        | notes                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------- |
+| \<profile\>                | Profile. default value is "default".                                         |
+| \<profile\>.dependencies[] | Dependency files of directories. Set relative path from **repository root**. |
+| \<profile\>.excludes[]     | Exclude files of directories.  Set relative path from **target directory**   |
 
 **example1**
 
@@ -139,4 +139,39 @@ dependencies = [
 excludes = [
   "doc",
 ]
+```
+
+### profile support
+
+If you want to switch between multiple source sets in version calculations, you can use profiles.
+
+The profile is specified in the `<path>:<profile>` format.
+
+ex) 
+- `sver calc lib1:build`
+- `sver calc .:default .:build`
+- `sver list .:test`
+
+**example3**
+
+add build profile for ignore tests.
+
+```sh
+.
+├── README.md
+├── src
+│   └── lib.rs
+└── tests
+│   └── test.rs
+└── sver.toml (3)
+```
+
+sver.toml (3)
+
+```toml
+[default]
+dependencies = []
+
+[build]
+excludes = ["README.md", "tests"]
 ```
