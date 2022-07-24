@@ -1,0 +1,11 @@
+[default]
+dependencies = []
+excludes = []
+
+[other-profile]
+dependencies = []
+excludes = ["test1.txt"]
+
+[other-invalid-profile]
+dependencies = []
+excludes = ["test999.txt"]

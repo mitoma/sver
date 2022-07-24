@@ -81,7 +81,9 @@ impl SverRepository {
                 let target_path = sver_config.target_path.clone();
                 sver_config
                     .iter()
-                    .map(|(profile, config)| config.validate(&target_path, profile, &index))
+                    .map(|(profile, config)| {
+                        config.validate(&target_path, profile, &index, &self.repo)
+                    })
                     .collect::<Vec<ValidationResult>>()
             })
             .collect();
@@ -152,7 +154,7 @@ impl SverRepository {
 
     fn list_sorted_entries(&self) -> Result<BTreeMap<Vec<u8>, OidAndMode>, Box<dyn Error>> {
         let mut path_set: HashMap<String, Vec<String>> = HashMap::new();
-        self.collect_path_and_excludes(&self.target_path, &mut path_set)?;
+        self.collect_path_and_excludes(&self.target_path, &self.profile, &mut path_set)?;
         debug!("dependency_paths:{:?}", path_set);
         let mut map = BTreeMap::new();
         for entry in self.repo.index()?.iter() {
@@ -180,6 +182,7 @@ impl SverRepository {
     fn collect_path_and_excludes(
         &self,
         path: &str,
+        profile: &str,
         path_and_excludes: &mut HashMap<String, Vec<String>>,
     ) -> Result<(), Box<dyn Error>> {
         if path_and_excludes.contains_key(path) {
@@ -196,14 +199,17 @@ impl SverRepository {
 
         if let Some(entry) = self.repo.index()?.get_path(p.as_path(), 0) {
             debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
-            let default_config = ProfileConfig::load_profile(
-                self.repo.find_blob(entry.id)?.content(),
-                &self.profile,
-            )?;
-            current_path_and_excludes.insert(path.to_string(), default_config.excludes.clone());
-            path_and_excludes.insert(path.to_string(), default_config.excludes);
-            for dependency_path in default_config.dependencies {
-                self.collect_path_and_excludes(&dependency_path, path_and_excludes)?;
+            let config =
+                ProfileConfig::load_profile(self.repo.find_blob(entry.id)?.content(), profile)?;
+            current_path_and_excludes.insert(path.to_string(), config.excludes.clone());
+            path_and_excludes.insert(path.to_string(), config.excludes);
+            for dependency in config.dependencies {
+                let (dependency_path, dependency_profile) = split_path_and_profile(&dependency);
+                self.collect_path_and_excludes(
+                    &dependency_path,
+                    &dependency_profile,
+                    path_and_excludes,
+                )?;
             }
         } else {
             current_path_and_excludes.insert(path.to_string(), vec![]);
@@ -240,7 +246,7 @@ impl SverRepository {
                     .ok_or("path is invalid")?
                     .replace(OS_SEP_STR, SEPARATOR_STR);
                 debug!("collect link path. path:{}", &link_path);
-                self.collect_path_and_excludes(&link_path, path_and_excludes)?;
+                self.collect_path_and_excludes(&link_path, "default", path_and_excludes)?;
             }
         }
         Ok(())

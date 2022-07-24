@@ -73,10 +73,15 @@ fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> boo
 }
 
 fn match_samefile_or_include_dir(test_path: &[u8], path: &[u8]) -> bool {
-    let is_same_file = test_path == path;
-    let is_contain_path =
-        path.is_empty() || test_path.starts_with([path, SEPARATOR_BYTE].concat().as_slice());
-    is_same_file || is_contain_path
+    is_samefile(test_path, path) || is_contain_path(test_path, path)
+}
+
+fn is_samefile(test_path: &[u8], path: &[u8]) -> bool {
+    test_path == path
+}
+
+fn is_contain_path(test_path: &[u8], path: &[u8]) -> bool {
+    path.is_empty() || test_path.starts_with([path, SEPARATOR_BYTE].concat().as_slice())
 }
 
 fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {

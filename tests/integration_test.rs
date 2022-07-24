@@ -1,10 +1,11 @@
 mod test_tool;
 
+use log::debug;
 use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
 
 use crate::test_tool::{
-    add_blog, add_blog_executable, add_submodule, add_symlink, calc_target_path, commit,
-    initialize, setup_test_repository,
+    add_blob, add_blob_executable, add_submodule, add_symlink, calc_target_path,
+    calc_target_path_with_profile, commit, initialize, setup_test_repository,
 };
 
 // repo layout
@@ -17,8 +18,8 @@ fn simple_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "hello.txt", "hello world!".as_bytes());
-    add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+    add_blob(&repo, "hello.txt", "hello world!".as_bytes());
+    add_blob(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -45,8 +46,8 @@ fn has_blob_executable() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog_executable(&repo, "hello.txt", "hello world!".as_bytes());
-    add_blog(&repo, "service1/world.txt", "good morning!".as_bytes());
+    add_blob_executable(&repo, "hello.txt", "hello world!".as_bytes());
+    add_blob(&repo, "service1/world.txt", "good morning!".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -73,8 +74,8 @@ fn has_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -110,7 +111,7 @@ fn cyclic_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
@@ -120,7 +121,7 @@ fn cyclic_repository() {
         ]"
         .as_bytes(),
     );
-    add_blog(
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -174,8 +175,8 @@ fn has_exclude_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "hello.txt", "hello".as_bytes());
-    add_blog(
+    add_blob(&repo, "hello.txt", "hello".as_bytes());
+    add_blob(
         &repo,
         "sver.toml",
         "
@@ -185,7 +186,7 @@ fn has_exclude_repository() {
         ]"
         .as_bytes(),
     );
-    add_blog(&repo, "doc/README.txt", "README".as_bytes());
+    add_blob(&repo, "doc/README.txt", "README".as_bytes());
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -246,7 +247,7 @@ fn has_symlink_single() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
     add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
     commit(&repo, "setup");
 
@@ -277,8 +278,8 @@ fn has_symlink_dir() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "original/README.txt", "hello.world".as_bytes());
-    add_blog(&repo, "original/Sample.txt", "sample".as_bytes());
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_blob(&repo, "original/Sample.txt", "sample".as_bytes());
 
     add_symlink(&repo, "linkdir/symlink", "../original");
     commit(&repo, "setup");
@@ -306,6 +307,180 @@ fn has_symlink_dir() {
 
 // repo layout
 // .
+// + test1.txt
+// + test2.txt
+// + sver.toml → [default] no setting, [prof1] exclude test1.txt
+#[test]
+fn multiprofile() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "test2.txt", "world".as_bytes());
+    add_blob(
+        &repo,
+        "sver.toml",
+        "
+        [default]
+        
+        [prof1]
+        excludes = [
+            \"test1.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["sver.toml", "test1.txt", "test2.txt"]);
+        assert_eq!(
+            version.version,
+            "f772ad1c8b70ee288c36242ce482e885d9cb0dc49f32a5c92bcad607ebe2eb23"
+        );
+    }
+
+    // prof1
+    {
+        let sver_repo =
+            SverRepository::new(&calc_target_path_with_profile(&repo, ".", "prof1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["sver.toml", "test2.txt"]);
+        assert_eq!(
+            version.version,
+            "bcc2d5c8ba9152fb12532033792c6a20d4d07a551e40477c424467c97366003a"
+        );
+    }
+}
+
+// repo layout
+// .
+// + lib1/test1.txt
+// + lib1/test2.txt
+// + lib1/sver.toml → [default] no setting, [prof1] excludes = ["test2.txt"]
+// + lib2/sver.toml → [default] no setting, [prof2] dependency = ["lib1:prof1"], [prof3] dependency = ["lib1/test2.txt"]
+#[test]
+fn multiprofile_multidir() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "lib1/test1.txt", "hello".as_bytes());
+    add_blob(&repo, "lib1/test2.txt", "world".as_bytes());
+    add_blob(
+        &repo,
+        "lib1/sver.toml",
+        "
+        [default]
+        
+        [prof1]
+        excludes = [
+            \"test2.txt\",
+        ]"
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "lib2/sver.toml",
+        "
+        [default]
+        
+        [prof2]
+        dependencies = [
+            \"lib1:prof1\",
+        ]
+
+        [prof3]
+        dependencies = [
+            \"lib1/test2.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec!["lib1/sver.toml", "lib1/test1.txt", "lib1/test2.txt"]
+        );
+        assert_eq!(
+            version.version,
+            "625de0221f168df0fb590ab28e69c8b5bc94ec61f5b1909aaae8491a0d9fa0c7"
+        );
+    }
+    // prof1
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib1:prof1")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["lib1/sver.toml", "lib1/test1.txt"]);
+        assert_eq!(
+            version.version,
+            "54a9168b93cba5a8ff2a1f4e65cc2f54f583aabf3cb702694884877452670447"
+        );
+    }
+    // prof2
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib2:prof2")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec!["lib1/sver.toml", "lib1/test1.txt", "lib2/sver.toml"]
+        );
+        assert_eq!(
+            version.version,
+            "839406ee976956c4d381626e5b2afd37e2b99caacfc850f5082347ec78fb0c4b"
+        );
+    }
+    // prof2
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib2:prof3")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(sources, vec!["lib1/test2.txt", "lib2/sver.toml"]);
+        assert_eq!(
+            version.version,
+            "41fbde4b67787d4efd190b3c90a56163cc582159d6b5696e733a649dd154b231"
+        );
+    }
+}
+
+// repo layout
+// .
 // + service1/hello.txt
 // + service2/sver.toml → dependency = [ "service1/hello.txt" ]
 #[test]
@@ -314,8 +489,8 @@ fn valid_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -352,8 +527,8 @@ fn invalid_dependencies_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service2/sver.toml",
         "
@@ -398,8 +573,8 @@ fn valid_excludes_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
@@ -436,8 +611,8 @@ fn invalid_excludes_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blog(&repo, "service1/hello.txt", "hello world!".as_bytes());
-    add_blog(
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
         &repo,
         "service1/sver.toml",
         "
@@ -467,6 +642,235 @@ fn invalid_excludes_repository() {
         assert_eq!(profile, "default");
         assert!(invalid_dependencies.is_empty());
         assert_eq!(invalid_excludes, vec!["hello-hello.txt"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → [prof1] dependency = [ "service1/hello.txt" ]
+#[test]
+fn valid_has_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof1]
+        dependencies = [
+            \"service1/hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    assert_eq!(result.len(), 2);
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof1");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service2/sver.toml → [prof1] dependency = [ "service1/hello.txt" ]
+#[test]
+fn invalid_has_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof1]
+        dependencies = [
+            \"service1/helloo.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    assert_eq!(result.len(), 2);
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof1");
+        assert_eq!(invalid_dependencies, vec!["service1/helloo.txt"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/sver.toml → [prof1]
+// + service2/sver.toml → [prof2] dependency = [ "service1:prof1" ]
+#[test]
+fn valid_no_target_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        [prof1]
+        "
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof2]
+        dependencies = [
+            \"service1:prof1\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.len(), 4);
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof2");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
+// + service1/sver.toml → [prof1]
+// + service2/sver.toml → [prof2] dependency = [ "service1:prof1" ]
+#[test]
+fn invalid_no_target_profile_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(
+        &repo,
+        "service1/sver.toml",
+        "
+        [default]
+        [prof1]
+        "
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        [prof2]
+        dependencies = [
+            \"service1:prof999\",
+        ]
+        [prof3]
+        dependencies = [
+            \"service1/:prof999\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let mut result = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.len(), 5);
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof3");
+        assert_eq!(invalid_dependencies, vec!["service1/:prof999"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Invalid {
+        path,
+        profile,
+        invalid_dependencies,
+        ..
+    }) = result.pop()
+    {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "prof2");
+        assert_eq!(invalid_dependencies, vec!["service1:prof999"]);
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+        assert_eq!(path, "service2");
+        assert_eq!(profile, "default");
     } else {
         assert!(false, "this line will not be execute");
     }

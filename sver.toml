@@ -4,3 +4,11 @@ excludes = [
   "doc",
   "testdata",
 ]
+
+[build]
+dependencies = []
+excludes = [
+  "doc",
+  "testdata",
+  "tests",
+]

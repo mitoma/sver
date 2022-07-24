@@ -12,7 +12,7 @@ use git2::{Index, Repository};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{match_samefile_or_include_dir, SEPARATOR_BYTE};
+use crate::{is_samefile, match_samefile_or_include_dir, split_path_and_profile, SEPARATOR_BYTE};
 
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub(crate) struct ProfileConfig {
@@ -154,12 +154,19 @@ impl ProfileConfig {
         profile: &str,
     ) -> Result<ProfileConfig, Box<dyn Error>> {
         let config = toml::from_slice::<SverConfig>(content)?;
+        debug!("loaded_config:{:?}, profile:{}", config, profile);
         config
             .get(profile)
             .ok_or_else(|| format!("profile[{}] is not found", profile).into())
     }
 
-    pub(crate) fn validate(&self, path: &str, profile: &str, index: &Index) -> ValidationResult {
+    pub(crate) fn validate(
+        &self,
+        path: &str,
+        profile: &str,
+        index: &Index,
+        repo: &Repository,
+    ) -> ValidationResult {
         let mut result = InnerValidationResult::default();
 
         result
@@ -169,7 +176,29 @@ impl ProfileConfig {
 
         for entry in index.iter() {
             result.invalid_dependencies.retain(|dependency| {
-                !match_samefile_or_include_dir(&entry.path, dependency.as_bytes())
+                let (path, profile) = split_path_and_profile(dependency);
+                if profile == "default" {
+                    !match_samefile_or_include_dir(&entry.path, path.as_bytes())
+                } else {
+                    if is_samefile(&entry.path, path.as_bytes()) {
+                        // file can not have profile
+                        return false;
+                    }
+
+                    let mut config_file_path: Vec<u8> = Vec::new();
+                    config_file_path.extend_from_slice(path.as_bytes());
+                    config_file_path.extend_from_slice(SEPARATOR_BYTE);
+                    config_file_path.extend_from_slice("sver.toml".as_bytes());
+                    debug!("step3");
+                    if is_samefile(&entry.path, config_file_path.as_slice()) {
+                        return if let Ok(blob) = &repo.find_blob(entry.id) {
+                            ProfileConfig::load_profile(blob.content(), &profile).is_err()
+                        } else {
+                            true
+                        };
+                    }
+                    true
+                }
             });
             result.invalid_excludes.retain(|exclude| {
                 let normalized_path = if path.is_empty() {

@@ -40,11 +40,11 @@ fn add_file(repo: &Repository, path: &str, content: &[u8], mode: FileMode) {
     index.write().unwrap();
 }
 
-pub fn add_blog(repo: &Repository, path: &str, content: &[u8]) {
+pub fn add_blob(repo: &Repository, path: &str, content: &[u8]) {
     add_file(repo, path, content, FileMode::Blob)
 }
 
-pub fn add_blog_executable(repo: &Repository, path: &str, content: &[u8]) {
+pub fn add_blob_executable(repo: &Repository, path: &str, content: &[u8]) {
     add_file(repo, path, content, FileMode::BlobExecutable)
 }
 
@@ -116,4 +116,10 @@ pub fn calc_target_path(repo: &Repository, path: &str) -> String {
     let mut path_buf = repo.workdir().unwrap().to_path_buf();
     path_buf.push(path);
     path_buf.to_str().unwrap().into()
+}
+
+pub fn calc_target_path_with_profile(repo: &Repository, path: &str, profile: &str) -> String {
+    let mut path_buf = repo.workdir().unwrap().to_path_buf();
+    path_buf.push(path);
+    format!("{}:{}", path_buf.to_str().unwrap(), profile)
 }
