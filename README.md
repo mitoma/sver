@@ -161,7 +161,7 @@ add build profile for ignore tests.
 ├── README.md
 ├── src
 │   └── lib.rs
-└── tests
+├── tests
 │   └── test.rs
 └── sver.toml (3)
 ```
