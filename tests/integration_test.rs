@@ -875,3 +875,47 @@ fn invalid_no_target_profile_repository() {
         assert!(false, "this line will not be execute");
     }
 }
+
+// repo layout
+// .
+// + service1/hello.txt
+#[test]
+fn init_on_basedirectory() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "world".as_bytes());
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, ".")).unwrap();
+
+    // exercise
+    let result = sver_repo.init_sver_config();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.unwrap(), "sver.toml is generated. path:");
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+#[test]
+fn init_on_subdirectory() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "world".as_bytes());
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
+
+    // exercise
+    let result = sver_repo.init_sver_config();
+
+    // verify
+    debug!("{:?}", result);
+    assert_eq!(result.unwrap(), "sver.toml is generated. path:service1");
+}
