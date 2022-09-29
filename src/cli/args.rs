@@ -1,9 +1,9 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about = "Version calcurator based on source code.", long_about = None)]
+#[command(author, version, about = "Version calcurator based on source code.", long_about = None)]
 pub(crate) struct Args {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub command: Commands,
 }
 
@@ -15,23 +15,23 @@ pub(crate) enum Commands {
         paths: Vec<String>,
 
         /// format of calucuration result
-        #[clap(arg_enum, short, long, default_value = "version-only")]
+        #[arg(short, long, default_value = "version-only")]
         output: OutputFormat,
         /// length of version
-        #[clap(arg_enum, short, long, default_value = "short")]
+        #[arg(short, long, default_value = "short")]
         length: VersionLength,
     },
     /// list package dependencies
     List {
         /// target path
-        #[clap(default_value = ".")]
+        #[arg(default_value = ".")]
         path: String,
     },
 
     /// generate empty config file
     Init {
         /// target path
-        #[clap(default_value = ".")]
+        #[arg(default_value = ".")]
         path: String,
     },
 
@@ -39,14 +39,14 @@ pub(crate) enum Commands {
     Validate,
 }
 
-#[derive(Debug, Clone, clap::ArgEnum)]
+#[derive(Debug, Clone, ValueEnum)]
 pub(crate) enum OutputFormat {
     VersionOnly,
     Toml,
     Json,
 }
 
-#[derive(Debug, Clone, clap::ArgEnum)]
+#[derive(Debug, Clone, ValueEnum)]
 pub(crate) enum VersionLength {
     Short,
     Long,
