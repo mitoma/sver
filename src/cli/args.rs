@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Version calcurator based on source code.", long_about = None)]
 pub(crate) struct Args {
-    #[clap(subcommand)]
+    #[command(subcommand)]
     pub command: Commands,
 }
 
@@ -24,14 +24,14 @@ pub(crate) enum Commands {
     /// list package dependencies
     List {
         /// target path
-        #[clap(default_value = ".")]
+        #[arg(default_value = ".")]
         path: String,
     },
 
     /// generate empty config file
     Init {
         /// target path
-        #[clap(default_value = ".")]
+        #[arg(default_value = ".")]
         path: String,
     },
 
