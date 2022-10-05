@@ -18,14 +18,13 @@ runs:
       if: ${{ inputs.os == 'linux' }}
       shell: bash
       run: |
-        mkdir -p "$HOME/.local/bin"
         TEMPDIR=$(mktemp -d)
         FILE_NAME="sver_${{ inputs.version }}_${{ inputs.os }}_amd64.zip"
         FILE_URL="https://github.com/mitoma/sver/releases/download/${{ inputs.version }}/$FILE_NAME"
         cd "$TEMPDIR"
         curl -L "$FILE_URL" -o "$FILE_NAME"
         unzip "$FILE_NAME"
-        mv sver "$HOME/.local/bin"
+        mv sver /usr/local/bin
         sver --help
 
     - name: install sver (windows)
