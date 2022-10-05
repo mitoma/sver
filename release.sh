@@ -23,6 +23,7 @@ echo "$WINDOWS_TMP/sver_${TAG}_windows_amd64.zip"
 cd "$REPO_ROOT"
 gh run download -n "sver-macos-${VERSION}" --dir "$MACOS_TMP"
 cd "$MACOS_TMP"
+chmod +x sver
 zip "sver_${TAG}_macos_amd64.zip" *
 echo "$MACOS_TMP/sver_${TAG}_macos_amd64.zip"
 
