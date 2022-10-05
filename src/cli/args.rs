@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Version calcurator based on source code.", long_about = None)]
+#[command(author, version, about = "Version calculator based on source code.", long_about = None)]
 pub(crate) struct Args {
     #[command(subcommand)]
     pub command: Commands,
