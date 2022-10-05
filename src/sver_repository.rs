@@ -128,14 +128,12 @@ impl SverRepository {
                     // Q. Why little endian?
                     // A. no reason.
                     hasher.update(u32::from(oid_and_mode.mode).to_le_bytes());
-                    let blob = self.repo.find_blob(oid_and_mode.oid)?;
-                    let content = blob.content();
-                    hasher.update(content);
+                    hasher.update(oid_and_mode.oid);
                     debug!(
-                        "path:{}, mode:{:?}, content:{}",
+                        "path:{}, mode:{:?}, oid:{}",
                         String::from_utf8(path.clone())?,
                         oid_and_mode.mode,
-                        String::from_utf8(content.to_vec())?
+                        oid_and_mode.oid
                     )
                 }
                 // Commit (Submodule の場合は参照先のコミットハッシュを計算対象に加える)
