@@ -47,7 +47,7 @@ struct OidAndMode {
 
 #[cfg(target_os = "windows")]
 const OS_SEP_STR: &str = "\\";
-#[cfg(target_os = "linux")]
+#[cfg(not(target_os = "windows"))]
 const OS_SEP_STR: &str = "/";
 
 const SEPARATOR_STR: &str = "/";
