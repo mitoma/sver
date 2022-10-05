@@ -58,7 +58,7 @@ impl SverRepository {
         let config_path = path_buf.as_path();
 
         if self.repo.index()?.get_path(config_path, 0).is_some() {
-            return Ok("sver.toml is already exists".into());
+            return Ok("sver.toml already exists".into());
         }
 
         let mut fs_path = PathBuf::new();
@@ -66,7 +66,7 @@ impl SverRepository {
         fs_path.push(config_path);
         if !SverConfig::write_initial_config(fs_path.as_path())? {
             return Ok(format!(
-                "sver.toml is already exists. but not commited. path:{}",
+                "sver.toml already exists, but is not committed. path:{}",
                 self.target_path
             ));
         }

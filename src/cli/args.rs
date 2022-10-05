@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about = "Version calcurator based on source code.", long_about = None)]
+#[command(author, version, about = "Version calculator based on source code.", long_about = None)]
 pub(crate) struct Args {
     #[command(subcommand)]
     pub command: Commands,
@@ -14,7 +14,7 @@ pub(crate) enum Commands {
         /// target paths
         paths: Vec<String>,
 
-        /// format of calucuration result
+        /// format of calculation result
         #[arg(short, long, default_value = "version-only")]
         output: OutputFormat,
         /// length of version
