@@ -32,7 +32,7 @@ fn simple_repository() {
     assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
     assert_eq!(
         version.version,
-        "c7eacf9aee8ced0b9131dce96c2e2077e2c683a7d39342c8c13b32fefac5662a"
+        "d601cac0967b58cd86a3a0384709f81ada1db3a42060e4458b843a7c7613b6ea"
     );
 }
 
@@ -60,7 +60,7 @@ fn has_blob_executable() {
     assert_eq!(sources, vec!["hello.txt", "service1/world.txt"]);
     assert_eq!(
         version.version,
-        "435f0baae5406a75a66e515bf1674db348382139b8443a695a2b1c2925935160"
+        "12890ee3efefa6318fbbd29adc708031c3b3a5080b8d195fb5c124080c3ec6c4"
     );
 }
 
@@ -97,7 +97,7 @@ fn has_dependencies_repository() {
     assert_eq!(sources, vec!["service1/hello.txt", "service2/sver.toml"]);
     assert_eq!(
         version.version,
-        "0cb6c0434a87e4ce7f18388365004a4809664cfd2c86b6bbd2b1572a005a564a"
+        "edcd58dca3b80c45676296640e0f64a11366cc4762247cf3b8873e17b3328648"
     );
 }
 
@@ -144,7 +144,7 @@ fn cyclic_repository() {
         assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
         assert_eq!(
             version.version,
-            "b3da97a449609fb4f3b14c47271b92858f2e4fa7986bfaa321a2a65ed775ae57"
+            "60163d9d178386ea7055374d104cbea3712bbdeb3c3dd5931ddf67dd7c8f5cdb"
         );
     }
     {
@@ -158,7 +158,7 @@ fn cyclic_repository() {
         assert_eq!(sources, vec!["service1/sver.toml", "service2/sver.toml"]);
         assert_eq!(
             version.version,
-            "d48299e3ecbd6943a51042d436002f06086c7b4d9d50bd1e2ad6d872bd4fb3d7"
+            "4241b717612be4a8f64f418d0bc2e568c1d3d4a01f42d88933b14bfbd585b90e"
         );
     }
 }
@@ -199,7 +199,7 @@ fn has_exclude_repository() {
     assert_eq!(sources, vec!["hello.txt", "sver.toml"]);
     assert_eq!(
         version.version,
-        "a53b015257360d95600b8f0b749c01a651e803aa05395a8f6b39e194f95c3dfe"
+        "8b883e40e964120ffb2f577e782b3a491156b07ace162d78a5434638133f13a0"
     );
 }
 
@@ -231,7 +231,7 @@ fn has_submodule() {
     assert_eq!(sources, vec![".gitmodules", "bano"]);
     assert_eq!(
         version.version,
-        "2600f60368549f186d7b48fe48765dbd57580cc416e91dc3fbca264d62d18f31"
+        "2eb2f536b59ca9b514a1fc2bede07ffc7b2a19c4cfa0b78f2e4cf33b81877af1"
     );
 }
 
@@ -261,7 +261,7 @@ fn has_symlink_single() {
     assert_eq!(sources, vec!["linkdir/symlink", "original/README.txt"]);
     assert_eq!(
         version.version,
-        "604b932c22dc969de21c8241ff46ea40f1a37d36050cc9d11345679389552d29"
+        "2d092ad213e284863e66125b9fda9e642a50c8347e640d5f431e587fde83bf93"
     );
 }
 
@@ -301,7 +301,7 @@ fn has_symlink_dir() {
     );
     assert_eq!(
         version.version,
-        "712093fffba02bcf58aefc2093064e6032183276940383b13145710ab2de7833"
+        "bfd875f92865460d1fcff4769bcd39e7c894c196265ec89937ca05505b41c935"
     );
 }
 
@@ -344,7 +344,7 @@ fn multiprofile() {
         assert_eq!(sources, vec!["sver.toml", "test1.txt", "test2.txt"]);
         assert_eq!(
             version.version,
-            "f772ad1c8b70ee288c36242ce482e885d9cb0dc49f32a5c92bcad607ebe2eb23"
+            "6594bb8e093129d224a6055d8484cca4138124c3014ac5c6586cb1f73d0849f7"
         );
     }
 
@@ -361,7 +361,7 @@ fn multiprofile() {
         assert_eq!(sources, vec!["sver.toml", "test2.txt"]);
         assert_eq!(
             version.version,
-            "bcc2d5c8ba9152fb12532033792c6a20d4d07a551e40477c424467c97366003a"
+            "9119cebdb5271d79539355318a02488e6c7b7f54dabe120a55220482f48a386f"
         );
     }
 }
@@ -426,7 +426,7 @@ fn multiprofile_multidir() {
         );
         assert_eq!(
             version.version,
-            "625de0221f168df0fb590ab28e69c8b5bc94ec61f5b1909aaae8491a0d9fa0c7"
+            "353265a18ba62fe6a818e8b35967706e356e2975ebbb439ecd969a57b3c8b95a"
         );
     }
     // prof1
@@ -441,7 +441,7 @@ fn multiprofile_multidir() {
         assert_eq!(sources, vec!["lib1/sver.toml", "lib1/test1.txt"]);
         assert_eq!(
             version.version,
-            "54a9168b93cba5a8ff2a1f4e65cc2f54f583aabf3cb702694884877452670447"
+            "ee87ef59413a2072ab99e14495a6995af3ffd5aaea193d43d08264f717758a38"
         );
     }
     // prof2
@@ -459,7 +459,7 @@ fn multiprofile_multidir() {
         );
         assert_eq!(
             version.version,
-            "839406ee976956c4d381626e5b2afd37e2b99caacfc850f5082347ec78fb0c4b"
+            "7403ad568d8781658870c471a52dd9c51aae3297965b6dded2f3afb25e3b282b"
         );
     }
     // prof2
@@ -474,7 +474,7 @@ fn multiprofile_multidir() {
         assert_eq!(sources, vec!["lib1/test2.txt", "lib2/sver.toml"]);
         assert_eq!(
             version.version,
-            "41fbde4b67787d4efd190b3c90a56163cc582159d6b5696e733a649dd154b231"
+            "283c470015f5791d8bcdd0c924d38488b7106be7ed4138d3e339b4cc2b5ffc9e"
         );
     }
 }
