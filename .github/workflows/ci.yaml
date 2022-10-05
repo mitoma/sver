@@ -15,11 +15,14 @@ jobs:
         target:
           - linux
           - windows
+          - macos
         include:
           - target: linux
             os: ubuntu-latest
           - target: windows
             os: windows-latest
+          - target: macos
+            os: macos-latest
 
     runs-on: ${{ matrix.os }}
 
@@ -61,11 +64,14 @@ jobs:
         target:
           - linux
           - windows
+          - macos
         include:
           - target: linux
             os: ubuntu-latest
           - target: windows
             os: windows-latest
+          - target: macos
+            os: macos-latest
 
     runs-on: ${{ matrix.os }}
 
