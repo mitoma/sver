@@ -1,30 +1,30 @@
 # sver
 
-Version calcurator based on source code.
+Version calculator based on source code.
 
 ## Description
 
-`sver` is small cli command for calucurate version based on source code of git repository.
+`sver` is small cli command for calculate version based on source code of git repository.
 
 ## Usage
 
-### Calcurate version of directory on git repository
+### Calculate version of directory on git repository
 
-Calcurate repository root.
+Calculate repository root.
 
 ```sh
 $ sver calc .
 ef5d3d3db6d5
 ```
 
-Calcurate sub directory in the repository.
+Calculate sub directory in the repository.
 
 ```sh
 $ sver calc testdata/service1/
 3f1bec06015e
 ```
 
-Calcurate multiple directory and output toml format.
+Calculate multiple directory and output toml format.
 
 ```sh
 $ sver calc testdata/service1/ testdata/service2/ --output toml
