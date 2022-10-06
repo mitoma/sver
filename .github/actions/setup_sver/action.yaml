@@ -14,7 +14,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: install sver (linux)
+    - name: install sver (linux and macos)
       if: ${{ inputs.os == 'linux' || inputs.os == 'macos' }}
       shell: bash
       run: |
