@@ -1,6 +1,7 @@
 use std::{env::temp_dir, path::Path, sync::Once};
 
-use git2::{Commit, IndexEntry, IndexTime, Oid, Repository, ResetType, Signature};
+use chrono::{DateTime, Utc};
+use git2::{Commit, IndexEntry, IndexTime, Oid, Repository, ResetType, Signature, Time};
 use log::debug;
 use uuid::Uuid;
 
@@ -71,10 +72,12 @@ pub fn add_submodule(
     index.write().unwrap();
 }
 
-pub fn commit(repo: &Repository, commit_message: &str) {
+pub fn commit_at(repo: &Repository, commit_message: &str, time: DateTime<Utc>) {
+    let time = Time::new(time.timestamp_millis(), 0);
+
     let id = repo.index().unwrap().write_tree().unwrap();
     let tree = repo.find_tree(id).unwrap();
-    let signature = Signature::now("sver tester", "tester@example.com").unwrap();
+    let signature = Signature::new("sver tester", "tester@example.com", &time).unwrap();
     let mut parents = Vec::new();
     if let Ok(parent_id) = repo.refname_to_id("HEAD") {
         let parent_commit = repo.find_commit(parent_id).unwrap();
@@ -91,8 +94,13 @@ pub fn commit(repo: &Repository, commit_message: &str) {
             parents.iter().collect::<Vec<&Commit>>().as_slice(),
         )
         .unwrap();
+    debug!("commit hash:{:?}", commit);
     let obj = repo.find_object(commit, None).unwrap();
     repo.reset(&obj, ResetType::Hard, None).unwrap();
+}
+
+pub fn commit(repo: &Repository, commit_message: &str) {
+    commit_at(repo, commit_message, Utc::now());
 }
 
 fn entry() -> IndexEntry {

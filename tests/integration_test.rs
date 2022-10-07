@@ -1,7 +1,13 @@
 mod test_tool;
 
+use std::{env::temp_dir, fs::create_dir};
+
+use chrono::{TimeZone, Utc};
+use git2::Repository;
 use log::debug;
 use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
+use test_tool::commit_at;
+use uuid::Uuid;
 
 use crate::test_tool::{
     add_blob, add_blob_executable, add_submodule, add_symlink, calc_target_path,
@@ -205,20 +211,36 @@ fn has_exclude_repository() {
 
 // repo layout
 // .
-// + bano → submodule https://github.com/mitoma/bano ec3774f3ad6abb46344cab9662a569a2f8231642
+// + sub → submodule ../sub e40a885afd013606e105c027a5c31910137e5566
 #[test]
 fn has_submodule() {
     initialize();
 
     // setup
-    let mut repo = setup_test_repository();
+    let mut tmp_dir = temp_dir();
+    let uuid = Uuid::new_v4();
+    tmp_dir.push(format!("sver-{}", uuid.to_string()));
+    create_dir(tmp_dir.clone()).unwrap();
+
+    // setup external repo
+    let mut sub_repo_dir = tmp_dir.clone();
+    sub_repo_dir.push("sub");
+
+    let sub_repo = Repository::init(sub_repo_dir).unwrap();
+    add_blob(&sub_repo, "hello.txt", "hello".as_bytes());
+    commit_at(&sub_repo, "setup", Utc.ymd(2022, 10, 1).and_hms(10, 20, 30));
+
+    // setup sut repo
+    let mut sut_repo_dir = tmp_dir.clone();
+    sut_repo_dir.push("sut");
+
+    let mut repo = Repository::init(sut_repo_dir).unwrap();
     add_submodule(
         &mut repo,
-        "https://github.com/mitoma/bano",
-        "bano",
-        "ec3774f3ad6abb46344cab9662a569a2f8231642",
+        "../sub",
+        "sub",
+        "e40a885afd013606e105c027a5c31910137e5566",
     );
-
     commit(&repo, "setup");
 
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "")).unwrap();
@@ -228,10 +250,10 @@ fn has_submodule() {
     let version = sver_repo.calc_version().unwrap();
 
     // verify
-    assert_eq!(sources, vec![".gitmodules", "bano"]);
+    assert_eq!(sources, vec![".gitmodules", "sub"]);
     assert_eq!(
         version.version,
-        "2eb2f536b59ca9b514a1fc2bede07ffc7b2a19c4cfa0b78f2e4cf33b81877af1"
+        "975af38bee93750b69eed48da18f3041058bacd90e215fb61f920c1e9cb710b7"
     );
 }
 
