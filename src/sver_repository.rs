@@ -218,10 +218,11 @@ impl SverRepository {
             path_and_excludes.insert(path.to_string(), vec![]);
         }
 
-        // include synbolic link
+        // include symbolic link
         for entry in self.repo.index()?.iter() {
-            let containable = containable(entry.path.as_slice(), &current_path_and_excludes);
-            if containable && FileMode::Link == FileMode::from(entry.mode) {
+            if FileMode::from(entry.mode) == FileMode::Link
+                && containable(entry.path.as_slice(), &current_path_and_excludes)
+            {
                 let path = String::from_utf8(entry.path)?;
                 let mut buf = PathBuf::new();
                 buf.push(path);
