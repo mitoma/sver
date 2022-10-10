@@ -13,7 +13,7 @@ use crate::{
     filemode::FileMode,
     find_repository, relative_path, split_path_and_profile,
     sver_config::{ProfileConfig, SverConfig, ValidationResult},
-    OidAndMode, Version, OS_SEP_STR, SEPARATOR_STR,
+    OidAndMode, Version, SEPARATOR_STR,
 };
 
 pub struct SverRepository {
@@ -34,7 +34,7 @@ impl SverRepository {
             .iter()
             .flat_map(|os| os.to_str())
             .collect::<Vec<_>>()
-            .join("/");
+            .join(SEPARATOR_STR);
         let work_dir = repo
             .workdir()
             .and_then(|p| p.to_str())
@@ -245,9 +245,10 @@ impl SverRepository {
                 }
 
                 let link_path = buf
-                    .to_str()
-                    .ok_or("path is invalid")?
-                    .replace(OS_SEP_STR, SEPARATOR_STR);
+                    .iter()
+                    .flat_map(|os| os.to_str())
+                    .collect::<Vec<_>>()
+                    .join(SEPARATOR_STR);
                 debug!("collect link path. path:{}", &link_path);
                 self.collect_path_and_excludes(&link_path, "default", path_and_excludes)?;
             }
