@@ -45,11 +45,6 @@ struct OidAndMode {
     mode: FileMode,
 }
 
-#[cfg(target_os = "windows")]
-const OS_SEP_STR: &str = "\\";
-#[cfg(not(target_os = "windows"))]
-const OS_SEP_STR: &str = "/";
-
 const SEPARATOR_STR: &str = "/";
 const SEPARATOR_BYTE: &[u8] = SEPARATOR_STR.as_bytes();
 
