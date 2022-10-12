@@ -87,7 +87,7 @@ songmu さんの ["同じソースツリーでテストが通っていたらテ�
 ```sh
 exit_code=0
 gh run download -n '<ジョブの種別>-<ジョブ固有のハッシュ値>.success' || exit_code=$?
-echo "##[set-output name=exit_code;]${exit_code}"
+echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
 ```
 
 GitHub Actions では artifact の保存期限は最長 90 日なので、それ以上過去に実行されたケースではジョブが再実行されてしまいます。要件的に再実行を許容することが難しければ保存期限が自分でコントロールできる S3 や DynamoDB といった外部のストレージの利用を検討するとよさそうです。
