@@ -126,11 +126,11 @@ jobs:
         name: calc current version
         run: |
           version="$(sver calc ${{ inputs.path }})"
-          echo "##[set-output name=version;]${version}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
       - id: extract_tag
         name: Extract tag name
-        run: echo "##[set-output name=tag;]$(echo ${GITHUB_REF#refs/tags/})"
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
       - name: create release
         run: ./release.sh "${{ steps.extract_tag.outputs.tag }}"

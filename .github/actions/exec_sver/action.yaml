@@ -51,7 +51,7 @@ runs:
       shell: bash
       run: |
         version="$(sver calc ${{ inputs.path }})"
-        echo "##[set-output name=version;]${version}"
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
 
     - id: ci_result
       name: Download ci_result
@@ -59,7 +59,7 @@ runs:
       run: |
         exit_code=0
         gh run download -n '${{ inputs.phase }}-${{ steps.calc_version.outputs.version }}.success' || exit_code=$?
-        echo "##[set-output name=exit_code;]${exit_code}"
+        echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
 
