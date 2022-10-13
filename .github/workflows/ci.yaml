@@ -51,6 +51,29 @@ jobs:
             ~/.cargo/git
             target
 
+  # calc coverage
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/setup_sver
+      - name: calc coverage
+        uses: ./.github/actions/exec_sver
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          phase: coverage
+          command: |
+            cargo install cargo-tarpaulin
+            cargo tarpaulin -o html
+          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          artifact_name: coverage
+          artifact_path: tarpaulin-report.html
+
   # build and upload artifact
   build_artifact:
 
