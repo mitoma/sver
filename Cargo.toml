@@ -15,7 +15,7 @@ toml = "0.5"
 clap = { version = "4.0", features = ["derive"] }
 log = "0.4"
 env_logger = "0.9"
-regex = "1.6"
+regex = "1.7"
 
 [dev-dependencies]
 chrono = "0.4"
