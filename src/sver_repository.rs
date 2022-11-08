@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashMap},
     error::Error,
     path::{Component, Path, PathBuf},
 };
@@ -158,13 +158,8 @@ impl SverRepository {
     }
 
     fn list_sorted_entries(&self) -> Result<BTreeMap<Vec<u8>, OidAndMode>, Box<dyn Error>> {
-        let mut calculated_targets: HashSet<CalculationTarget> = HashSet::new();
-        let mut path_set: HashMap<String, Vec<String>> = HashMap::new();
-        self.collect_path_and_excludes(
-            &self.calculation_target,
-            &mut calculated_targets,
-            &mut path_set,
-        )?;
+        let mut path_set: HashMap<CalculationTarget, Vec<String>> = HashMap::new();
+        self.collect_path_and_excludes(&self.calculation_target, &mut path_set)?;
         debug!("dependency_paths:{:?}", path_set);
         let mut map = BTreeMap::new();
         for entry in self.repo.index()?.iter() {
@@ -192,10 +187,9 @@ impl SverRepository {
     fn collect_path_and_excludes(
         &self,
         calculation_target: &CalculationTarget,
-        calculated_targets: &mut HashSet<CalculationTarget>,
-        path_and_excludes: &mut HashMap<String, Vec<String>>,
+        path_and_excludes: &mut HashMap<CalculationTarget, Vec<String>>,
     ) -> Result<(), Box<dyn Error>> {
-        if calculated_targets.contains(calculation_target) {
+        if path_and_excludes.contains_key(calculation_target) {
             debug!(
                 "already added. path:{}, profile:{}",
                 calculation_target.path, calculation_target.profile
@@ -208,7 +202,7 @@ impl SverRepository {
         p.push(&calculation_target.path);
         p.push("sver.toml");
 
-        let mut current_path_and_excludes: HashMap<String, Vec<String>> = HashMap::new();
+        let mut current_path_and_excludes: HashMap<CalculationTarget, Vec<String>> = HashMap::new();
 
         if let Some(entry) = self.repo.index()?.get_path(p.as_path(), 0) {
             debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
@@ -216,22 +210,15 @@ impl SverRepository {
                 self.repo.find_blob(entry.id)?.content(),
                 &calculation_target.profile,
             )?;
-            current_path_and_excludes
-                .insert(calculation_target.path.to_string(), config.excludes.clone());
-            path_and_excludes.insert(calculation_target.path.to_string(), config.excludes);
-            calculated_targets.insert(calculation_target.clone());
+            current_path_and_excludes.insert(calculation_target.clone(), config.excludes.clone());
+            path_and_excludes.insert(calculation_target.clone(), config.excludes);
             for dependency in config.dependencies {
                 let dependency_target = split_path_and_profile(&dependency);
-                self.collect_path_and_excludes(
-                    &dependency_target,
-                    calculated_targets,
-                    path_and_excludes,
-                )?;
+                self.collect_path_and_excludes(&dependency_target, path_and_excludes)?;
             }
         } else {
-            current_path_and_excludes.insert(calculation_target.path.to_string(), vec![]);
-            path_and_excludes.insert(calculation_target.path.to_string(), vec![]);
-            calculated_targets.insert(calculation_target.clone());
+            current_path_and_excludes.insert(calculation_target.clone(), vec![]);
+            path_and_excludes.insert(calculation_target.clone(), vec![]);
         }
 
         // include symbolic link
@@ -268,7 +255,6 @@ impl SverRepository {
                 debug!("collect link path. path:{}", &link_path);
                 self.collect_path_and_excludes(
                     &CalculationTarget::new(link_path, "default".to_string()),
-                    calculated_targets,
                     path_and_excludes,
                 )?;
             }

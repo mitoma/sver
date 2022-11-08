@@ -49,16 +49,16 @@ struct OidAndMode {
 const SEPARATOR_STR: &str = "/";
 const SEPARATOR_BYTE: &[u8] = SEPARATOR_STR.as_bytes();
 
-fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> bool {
+fn containable(test_path: &[u8], path_set: &HashMap<CalculationTarget, Vec<String>>) -> bool {
     path_set.iter().any(|(include, excludes)| {
-        let include_file = match_samefile_or_include_dir(test_path, include.as_bytes());
+        let include_file = match_samefile_or_include_dir(test_path, include.path.as_bytes());
         let exclude_file = excludes.iter().any(|exclude| {
-            if include.is_empty() {
+            if include.path.is_empty() {
                 match_samefile_or_include_dir(test_path, exclude.as_bytes())
             } else {
                 match_samefile_or_include_dir(
                     test_path,
-                    [include.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
+                    [include.path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
                         .concat()
                         .as_slice(),
                 )
