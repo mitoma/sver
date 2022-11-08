@@ -5,7 +5,10 @@ use std::{env::temp_dir, fs::create_dir};
 use chrono::{TimeZone, Utc};
 use git2::Repository;
 use log::debug;
-use sver::{sver_config::ValidationResult, sver_repository::SverRepository};
+use sver::{
+    sver_config::{CalculationTarget, ValidationResult},
+    sver_repository::SverRepository,
+};
 use test_tool::commit_at;
 use uuid::Uuid;
 
@@ -531,7 +534,10 @@ fn valid_dependencies_repository() {
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -570,8 +576,7 @@ fn invalid_dependencies_repository() {
     // verify
     assert_eq!(result.len(), 1);
     if let Some(ValidationResult::Invalid {
-        path,
-        profile,
+        calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         invalid_excludes,
     }) = result.pop()
@@ -615,7 +620,10 @@ fn valid_excludes_repository() {
 
     // verify
     assert_eq!(result.len(), 1);
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service1");
         assert_eq!(profile, "default");
     } else {
@@ -654,8 +662,7 @@ fn invalid_excludes_repository() {
     // verify
     assert_eq!(result.len(), 1);
     if let Some(ValidationResult::Invalid {
-        path,
-        profile,
+        calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         invalid_excludes,
     }) = result.pop()
@@ -700,13 +707,19 @@ fn valid_has_profile_repository() {
 
     // verify
     assert_eq!(result.len(), 2);
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof1");
     } else {
         assert!(false, "this line will not be execute");
     }
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -746,8 +759,7 @@ fn invalid_has_profile_repository() {
     // verify
     assert_eq!(result.len(), 2);
     if let Some(ValidationResult::Invalid {
-        path,
-        profile,
+        calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
     }) = result.pop()
@@ -758,7 +770,10 @@ fn invalid_has_profile_repository() {
     } else {
         assert!(false, "this line will not be execute");
     }
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -806,13 +821,19 @@ fn valid_no_target_profile_repository() {
     // verify
     debug!("{:?}", result);
     assert_eq!(result.len(), 4);
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof2");
     } else {
         assert!(false, "this line will not be execute");
     }
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -865,8 +886,7 @@ fn invalid_no_target_profile_repository() {
     debug!("{:?}", result);
     assert_eq!(result.len(), 5);
     if let Some(ValidationResult::Invalid {
-        path,
-        profile,
+        calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
     }) = result.pop()
@@ -878,8 +898,7 @@ fn invalid_no_target_profile_repository() {
         assert!(false, "this line will not be execute");
     }
     if let Some(ValidationResult::Invalid {
-        path,
-        profile,
+        calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
     }) = result.pop()
@@ -890,7 +909,10 @@ fn invalid_no_target_profile_repository() {
     } else {
         assert!(false, "this line will not be execute");
     }
-    if let Some(ValidationResult::Valid { path, profile }) = result.pop() {
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { path, profile },
+    }) = result.pop()
+    {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
@@ -974,7 +996,7 @@ fn multiprofile_singledir() {
         dependencies = [
             \"test2.txt\",
         ]"
-            .as_bytes(),
+        .as_bytes(),
     );
     commit(&repo, "setup");
 
@@ -987,10 +1009,7 @@ fn multiprofile_singledir() {
         let version = sver_repo.calc_version().unwrap();
 
         // verify
-        assert_eq!(
-            sources,
-            vec!["lib/sver.toml", "test1.txt", "test2.txt"]
-        );
+        assert_eq!(sources, vec!["lib/sver.toml", "test1.txt", "test2.txt"]);
         assert_eq!(
             version.version,
             "1a994876a6b773a73dd08ba8f176257f62ed9e95b5f034238c42da9702115ffe"
