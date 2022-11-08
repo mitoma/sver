@@ -941,3 +941,59 @@ fn init_on_subdirectory() {
     debug!("{:?}", result);
     assert_eq!(result.unwrap(), "sver.toml is generated. path:service1");
 }
+
+// repo layout
+// .
+// + test1.txt
+// + test2.txt
+// + lib/sver.toml -> [default] dependency = ["lib/:prof1","lib/:prof2"], [prof1] dependency = ["test1.txt"], [prof2] dependency = ["test2.txt"]
+#[test]
+fn multiprofile_singledir() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "test2.txt", "world".as_bytes());
+    add_blob(
+        &repo,
+        "lib/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"lib/:prof1\",
+            \"lib/:prof2\",
+        ]
+
+        [prof1]
+        dependencies = [
+            \"test1.txt\",
+        ]
+
+        [prof2]
+        dependencies = [
+            \"test2.txt\",
+        ]"
+            .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec!["lib/sver.toml", "test1.txt", "test2.txt"]
+        );
+        assert_eq!(
+            version.version,
+            "1a994876a6b773a73dd08ba8f176257f62ed9e95b5f034238c42da9702115ffe"
+        );
+    }
+}

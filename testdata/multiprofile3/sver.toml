@@ -1,0 +1,14 @@
+[default]
+dependencies = [
+  "testdata/multiprofile3:profile1",
+  "testdata/multiprofile3:profile2",
+]
+excludes = []
+
+[profile1]
+dependencies = ["testdata/multiprofile2/test1.txt"]
+excludes = []
+
+[profile2]
+dependencies = ["testdata/multiprofile2/test2.txt"]
+excludes = []
