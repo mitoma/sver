@@ -1027,7 +1027,7 @@ fn multiprofile_singledir() {
 // + lib/sver.toml ->
 //      [default] dependency = ["src/:prof1","src/:prof2"]
 #[test]
-fn ref_multiprofile_singledir() {
+fn multiprofile_ref_singledir() {
     initialize();
 
     // setup
@@ -1085,7 +1085,7 @@ fn ref_multiprofile_singledir() {
 
         // exercise
         let sources = sver_repo.list_sources().unwrap();
-        //let version = sver_repo.calc_version().unwrap();
+        let version = sver_repo.calc_version().unwrap();
 
         // verify
         assert_eq!(
@@ -1097,9 +1097,9 @@ fn ref_multiprofile_singledir() {
                 "src/test2.txt"
             ]
         );
-        //assert_eq!(
-        //    version.version,
-        //    "unknown"
-        //);
+        assert_eq!(
+            version.version,
+            "9f70fc2af283722f7ec609b4b7bb36b0f6c16699036f516f04ebff7c91dd2afc"
+        );
     }
 }
