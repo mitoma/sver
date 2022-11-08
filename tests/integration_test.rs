@@ -1012,7 +1012,7 @@ fn multiprofile_singledir() {
         assert_eq!(sources, vec!["lib/sver.toml", "test1.txt", "test2.txt"]);
         assert_eq!(
             version.version,
-            "1a994876a6b773a73dd08ba8f176257f62ed9e95b5f034238c42da9702115ffe"
+            "219fa5cd7cc287ff9f3df5b96be5b8e8d81decc95ba69d13e67a722a9bf45c31"
         );
     }
 }

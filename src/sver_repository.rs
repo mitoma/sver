@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     error::Error,
     path::{Component, Path, PathBuf},
 };
@@ -158,10 +158,11 @@ impl SverRepository {
     }
 
     fn list_sorted_entries(&self) -> Result<BTreeMap<Vec<u8>, OidAndMode>, Box<dyn Error>> {
+        let mut calculated_targets: HashSet<CalculationTarget> = HashSet::new();
         let mut path_set: HashMap<String, Vec<String>> = HashMap::new();
         self.collect_path_and_excludes(
-            &self.calculation_target.path,
-            &self.calculation_target.profile,
+            &self.calculation_target,
+            &mut calculated_targets,
             &mut path_set,
         )?;
         debug!("dependency_paths:{:?}", path_set);
@@ -190,42 +191,47 @@ impl SverRepository {
 
     fn collect_path_and_excludes(
         &self,
-        path: &str,
-        profile: &str,
+        calculation_target: &CalculationTarget,
+        calculated_targets: &mut HashSet<CalculationTarget>,
         path_and_excludes: &mut HashMap<String, Vec<String>>,
     ) -> Result<(), Box<dyn Error>> {
-        if path_and_excludes.contains_key(path) {
-            debug!("already added. path:{}", path.to_string());
+        if calculated_targets.contains(calculation_target) {
+            debug!(
+                "already added. path:{}, profile:{}",
+                calculation_target.path, calculation_target.profile
+            );
             return Ok(());
         }
-        debug!("add dep path : {}", path);
+        debug!("add dep path : {}", calculation_target.path);
 
         let mut p = PathBuf::new();
-        p.push(path);
+        p.push(&calculation_target.path);
         p.push("sver.toml");
 
         let mut current_path_and_excludes: HashMap<String, Vec<String>> = HashMap::new();
 
         if let Some(entry) = self.repo.index()?.get_path(p.as_path(), 0) {
             debug!("sver.toml exists. path:{:?}", String::from_utf8(entry.path));
-            let config =
-                ProfileConfig::load_profile(self.repo.find_blob(entry.id)?.content(), profile)?;
-            current_path_and_excludes.insert(path.to_string(), config.excludes.clone());
-            path_and_excludes.insert(path.to_string(), config.excludes);
+            let config = ProfileConfig::load_profile(
+                self.repo.find_blob(entry.id)?.content(),
+                &calculation_target.profile,
+            )?;
+            current_path_and_excludes
+                .insert(calculation_target.path.to_string(), config.excludes.clone());
+            path_and_excludes.insert(calculation_target.path.to_string(), config.excludes);
+            calculated_targets.insert(calculation_target.clone());
             for dependency in config.dependencies {
-                let CalculationTarget {
-                    path: dependency_path,
-                    profile: dependency_profile,
-                } = split_path_and_profile(&dependency);
+                let dependency_target = split_path_and_profile(&dependency);
                 self.collect_path_and_excludes(
-                    &dependency_path,
-                    &dependency_profile,
+                    &dependency_target,
+                    calculated_targets,
                     path_and_excludes,
                 )?;
             }
         } else {
-            current_path_and_excludes.insert(path.to_string(), vec![]);
-            path_and_excludes.insert(path.to_string(), vec![]);
+            current_path_and_excludes.insert(calculation_target.path.to_string(), vec![]);
+            path_and_excludes.insert(calculation_target.path.to_string(), vec![]);
+            calculated_targets.insert(calculation_target.clone());
         }
 
         // include symbolic link
@@ -260,7 +266,11 @@ impl SverRepository {
                     .collect::<Vec<_>>()
                     .join(SEPARATOR_STR);
                 debug!("collect link path. path:{}", &link_path);
-                self.collect_path_and_excludes(&link_path, "default", path_and_excludes)?;
+                self.collect_path_and_excludes(
+                    &CalculationTarget::new(link_path, "default".to_string()),
+                    calculated_targets,
+                    path_and_excludes,
+                )?;
             }
         }
         Ok(())
