@@ -1016,3 +1016,90 @@ fn multiprofile_singledir() {
         );
     }
 }
+
+// repo layout
+// .
+// + src/test1.txt
+// + src/test2.txt
+// + src/sver.toml ->
+//      [prof1] excludes = ["test2.txt"]
+//      [prof2] excludes = ["test1.txt"]
+// + lib/sver.toml ->
+//      [default] dependency = ["src/:prof1","src/:prof2"]
+#[test]
+fn ref_multiprofile_singledir() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "src/test1.txt", "hello".as_bytes());
+    add_blob(&repo, "src/test2.txt", "world".as_bytes());
+    add_blob(
+        &repo,
+        "src/sver.toml",
+        "
+        [prof1]
+        excludes = [
+            \"test2.txt\",
+        ]
+
+        [prof2]
+        excludes = [
+            \"test1.txt\",
+        ]"
+        .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "lib/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"src:prof1\",
+            \"src:prof2\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // src:prof1
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "src:prof1")).unwrap();
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        // verify
+        assert_eq!(sources, vec!["src/sver.toml", "src/test1.txt"]);
+    }
+    // src:prof2
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "src:prof2")).unwrap();
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        // verify
+        assert_eq!(sources, vec!["src/sver.toml", "src/test2.txt"]);
+    }
+
+    // default
+    {
+        let sver_repo = SverRepository::new(&calc_target_path(&repo, "lib")).unwrap();
+
+        // exercise
+        let sources = sver_repo.list_sources().unwrap();
+        //let version = sver_repo.calc_version().unwrap();
+
+        // verify
+        assert_eq!(
+            sources,
+            vec![
+                "lib/sver.toml",
+                "src/sver.toml",
+                "src/test1.txt",
+                "src/test2.txt"
+            ]
+        );
+        //assert_eq!(
+        //    version.version,
+        //    "unknown"
+        //);
+    }
+}
