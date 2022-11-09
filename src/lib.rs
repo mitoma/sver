@@ -30,10 +30,7 @@ fn split_path_and_profile(value: &str) -> CalculationTarget {
     })
     .unwrap_or_else(|| {
         let regex = Regex::new(&format!("{}$", SEPARATOR_STR)).unwrap();
-        CalculationTarget::new(
-            regex.replace(value, "").to_string(),
-            "default".to_string(),
-        )
+        CalculationTarget::new(regex.replace(value, "").to_string(), "default".to_string())
     })
 }
 
