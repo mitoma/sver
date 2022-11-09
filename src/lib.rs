@@ -20,7 +20,7 @@ pub struct Version {
 }
 
 fn split_path_and_profile(value: &str) -> CalculationTarget {
-    let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
+    let regex = Regex::new(&format!("(.+?){}?:([a-zA-Z0-9-_]+)", SEPARATOR_STR)).unwrap();
     let caps = regex.captures(value);
     caps.map(|caps| {
         CalculationTarget::new(
@@ -28,7 +28,13 @@ fn split_path_and_profile(value: &str) -> CalculationTarget {
             caps.get(2).unwrap().as_str().to_string(),
         )
     })
-    .unwrap_or_else(|| CalculationTarget::new(value.to_string(), "default".to_string()))
+    .unwrap_or_else(|| {
+        let regex = Regex::new(&format!("{}$", SEPARATOR_STR)).unwrap();
+        CalculationTarget::new(
+            regex.replace(value, "").to_string(),
+            "default".to_string(),
+        )
+    })
 }
 
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
@@ -100,7 +106,15 @@ mod tests {
             CalculationTarget::new("hello".to_string(), "default".to_string())
         );
         assert_eq!(
+            split_path_and_profile("hello/"),
+            CalculationTarget::new("hello".to_string(), "default".to_string())
+        );
+        assert_eq!(
             split_path_and_profile("hello:world"),
+            CalculationTarget::new("hello".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            split_path_and_profile("hello/:world"),
             CalculationTarget::new("hello".to_string(), "world".to_string())
         );
         assert_eq!(
