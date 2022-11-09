@@ -14,6 +14,18 @@ use serde::{Deserialize, Serialize};
 
 use crate::{is_samefile, match_samefile_or_include_dir, split_path_and_profile, SEPARATOR_BYTE};
 
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct CalculationTarget {
+    pub path: String,
+    pub profile: String,
+}
+
+impl CalculationTarget {
+    pub fn new(path: String, profile: String) -> Self {
+        Self { path, profile }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Default, Debug, PartialEq)]
 pub(crate) struct ProfileConfig {
     #[serde(default)]
@@ -117,12 +129,10 @@ impl InnerValidationResult {
 #[derive(Debug)]
 pub enum ValidationResult {
     Valid {
-        path: String,
-        profile: String,
+        calcuration_target: CalculationTarget,
     },
     Invalid {
-        path: String,
-        profile: String,
+        calcuration_target: CalculationTarget,
         invalid_excludes: Vec<String>,
         invalid_dependencies: Vec<String>,
     },
@@ -131,12 +141,13 @@ pub enum ValidationResult {
 impl Display for ValidationResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ValidationResult::Valid { path, profile } => {
+            ValidationResult::Valid {
+                calcuration_target: CalculationTarget { path, profile },
+            } => {
                 writeln!(f, "[OK]\t{}/sver.toml:[{}]", path, profile)
             }
             ValidationResult::Invalid {
-                path,
-                profile,
+                calcuration_target: CalculationTarget { path, profile },
                 invalid_dependencies,
                 invalid_excludes,
             } => {
@@ -176,7 +187,7 @@ impl ProfileConfig {
 
         for entry in index.iter() {
             result.invalid_dependencies.retain(|dependency| {
-                let (path, profile) = split_path_and_profile(dependency);
+                let CalculationTarget { path, profile } = split_path_and_profile(dependency);
                 if profile == "default" {
                     !match_samefile_or_include_dir(&entry.path, path.as_bytes())
                 } else {
@@ -223,13 +234,11 @@ impl ProfileConfig {
 
         if result.is_empty() {
             ValidationResult::Valid {
-                path: path.to_string(),
-                profile: profile.to_string(),
+                calcuration_target: CalculationTarget::new(path.to_string(), profile.to_string()),
             }
         } else {
             ValidationResult::Invalid {
-                path: path.to_string(),
-                profile: profile.to_string(),
+                calcuration_target: CalculationTarget::new(path.to_string(), profile.to_string()),
                 invalid_excludes: result.invalid_excludes.clone(),
                 invalid_dependencies: result.invalid_dependencies.clone(),
             }

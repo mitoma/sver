@@ -11,6 +11,7 @@ use std::{
 use self::filemode::FileMode;
 use git2::{Oid, Repository};
 use regex::Regex;
+use sver_config::CalculationTarget;
 
 pub struct Version {
     pub repository_root: String,
@@ -18,16 +19,16 @@ pub struct Version {
     pub version: String,
 }
 
-fn split_path_and_profile(value: &str) -> (String, String) {
+fn split_path_and_profile(value: &str) -> CalculationTarget {
     let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
     let caps = regex.captures(value);
     caps.map(|caps| {
-        (
+        CalculationTarget::new(
             caps.get(1).unwrap().as_str().to_string(),
             caps.get(2).unwrap().as_str().to_string(),
         )
     })
-    .unwrap_or((value.to_string(), "default".to_string()))
+    .unwrap_or_else(|| CalculationTarget::new(value.to_string(), "default".to_string()))
 }
 
 fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
@@ -48,16 +49,16 @@ struct OidAndMode {
 const SEPARATOR_STR: &str = "/";
 const SEPARATOR_BYTE: &[u8] = SEPARATOR_STR.as_bytes();
 
-fn containable(test_path: &[u8], path_set: &HashMap<String, Vec<String>>) -> bool {
+fn containable(test_path: &[u8], path_set: &HashMap<CalculationTarget, Vec<String>>) -> bool {
     path_set.iter().any(|(include, excludes)| {
-        let include_file = match_samefile_or_include_dir(test_path, include.as_bytes());
+        let include_file = match_samefile_or_include_dir(test_path, include.path.as_bytes());
         let exclude_file = excludes.iter().any(|exclude| {
-            if include.is_empty() {
+            if include.path.is_empty() {
                 match_samefile_or_include_dir(test_path, exclude.as_bytes())
             } else {
                 match_samefile_or_include_dir(
                     test_path,
-                    [include.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
+                    [include.path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()]
                         .concat()
                         .as_slice(),
                 )
@@ -90,25 +91,25 @@ fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::split_path_and_profile;
+    use crate::{split_path_and_profile, sver_config::CalculationTarget};
 
     #[test]
     fn test_split() {
         assert_eq!(
             split_path_and_profile("hello"),
-            ("hello".to_string(), "default".to_string())
+            CalculationTarget::new("hello".to_string(), "default".to_string())
         );
         assert_eq!(
             split_path_and_profile("hello:world"),
-            ("hello".to_string(), "world".to_string())
+            CalculationTarget::new("hello".to_string(), "world".to_string())
         );
         assert_eq!(
             split_path_and_profile(r"c:\hello"),
-            (r"c:\hello".to_string(), "default".to_string())
+            CalculationTarget::new(r"c:\hello".to_string(), "default".to_string())
         );
         assert_eq!(
             split_path_and_profile(r"c:\hello:world-wide"),
-            (r"c:\hello".to_string(), "world-wide".to_string())
+            CalculationTarget::new(r"c:\hello".to_string(), "world-wide".to_string())
         );
     }
 }
