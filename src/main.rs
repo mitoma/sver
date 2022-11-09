@@ -1,6 +1,6 @@
 mod cli;
 
-use std::{error::Error, process::ExitCode};
+use std::process::ExitCode;
 
 use crate::cli::outputs::format_versions;
 
@@ -32,11 +32,7 @@ fn main() -> ExitCode {
     }
 }
 
-fn calc(
-    paths: Vec<String>,
-    output: OutputFormat,
-    length: VersionLength,
-) -> Result<(), Box<dyn Error>> {
+fn calc(paths: Vec<String>, output: OutputFormat, length: VersionLength) -> anyhow::Result<()> {
     let paths = if paths.is_empty() {
         vec![".".to_string()]
     } else {
@@ -46,12 +42,12 @@ fn calc(
     let versions = paths
         .iter()
         .map(|p| SverRepository::new(p)?.calc_version())
-        .collect::<Result<Vec<Version>, Box<dyn Error>>>()?;
+        .collect::<anyhow::Result<Vec<Version>>>()?;
     println!("{}", format_versions(&versions, output, length)?);
     Ok(())
 }
 
-fn list(path: &str) -> Result<(), Box<dyn Error>> {
+fn list(path: &str) -> anyhow::Result<()> {
     SverRepository::new(path)?
         .list_sources()?
         .iter()
@@ -59,12 +55,12 @@ fn list(path: &str) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn init(path: &str) -> Result<(), Box<dyn Error>> {
+fn init(path: &str) -> anyhow::Result<()> {
     println!("{}", SverRepository::new(path)?.init_sver_config()?);
     Ok(())
 }
 
-fn validate() -> Result<(), Box<dyn Error>> {
+fn validate() -> anyhow::Result<()> {
     SverRepository::new(".")?
         .validate_sver_config()?
         .iter()

@@ -4,11 +4,11 @@ pub mod sver_repository;
 
 use std::{
     collections::HashMap,
-    error::Error,
     path::{Path, PathBuf},
 };
 
 use self::filemode::FileMode;
+use anyhow::{anyhow, Context};
 use git2::{Oid, Repository};
 use regex::Regex;
 use sver_config::CalculationTarget;
@@ -31,11 +31,11 @@ fn split_path_and_profile(value: &str) -> CalculationTarget {
     .unwrap_or_else(|| CalculationTarget::new(value.to_string(), "default".to_string()))
 }
 
-fn relative_path(repo: &Repository, path: &Path) -> Result<PathBuf, Box<dyn Error>> {
+fn relative_path(repo: &Repository, path: &Path) -> anyhow::Result<PathBuf> {
     let repo_path = repo
         .workdir()
         .and_then(|p| p.canonicalize().ok())
-        .ok_or("bare repository is not supported")?;
+        .with_context(|| "bare repository is not supported")?;
     let current_path = path.canonicalize()?;
     let result = current_path.strip_prefix(repo_path)?.to_path_buf();
     Ok(result)
@@ -80,13 +80,13 @@ fn is_contain_path(test_path: &[u8], path: &[u8]) -> bool {
     path.is_empty() || test_path.starts_with([path, SEPARATOR_BYTE].concat().as_slice())
 }
 
-fn find_repository(from_path: &Path) -> Result<Repository, Box<dyn Error>> {
+fn find_repository(from_path: &Path) -> anyhow::Result<Repository> {
     for target_path in from_path.canonicalize()?.ancestors() {
         if let Ok(repo) = Repository::open(target_path) {
             return Ok(repo);
         }
     }
-    Err("repository was not found".into())
+    Err(anyhow!("repository was not found"))
 }
 
 #[cfg(test)]
