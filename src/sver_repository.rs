@@ -138,7 +138,7 @@ impl SverRepository {
                         oid_and_mode.oid
                     )
                 }
-                // Commit (Submodule の場合は参照先のコミットハッシュを計算対象に加える)
+                // Commit (For submodules, include the commit hash in the calculation source.)
                 FileMode::Commit => {
                     debug!("commit_hash?:{}", oid_and_mode.oid);
                     hasher.update(oid_and_mode.oid);

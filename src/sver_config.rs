@@ -1,4 +1,3 @@
-// sver.toml ファイルの操作を扱うモジュール
 use std::{
     collections::{btree_map::Iter, BTreeMap},
     fmt::Display,
