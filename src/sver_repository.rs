@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 use crate::{
     containable,
     filemode::FileMode,
-    find_repository, relative_path, split_path_and_profile,
+    find_repository, relative_path,
     sver_config::{CalculationTarget, ProfileConfig, SverConfig, ValidationResult},
     OidAndMode, Version, SEPARATOR_STR,
 };
@@ -24,7 +24,7 @@ pub struct SverRepository {
 
 impl SverRepository {
     pub fn new(path: &str) -> anyhow::Result<Self> {
-        let calculation_target = split_path_and_profile(path);
+        let calculation_target = CalculationTarget::parse(path);
 
         let target_path = Path::new(&calculation_target.path);
         let repo = find_repository(target_path)?;
