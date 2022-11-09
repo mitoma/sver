@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Context;
 use git2::Repository;
-use log::debug;
+use log::{debug, log_enabled, Level};
 use sha2::{Digest, Sha256};
 
 use crate::{
@@ -78,9 +78,11 @@ impl SverRepository {
 
     pub fn validate_sver_config(&self) -> anyhow::Result<Vec<ValidationResult>> {
         let configs = SverConfig::load_all_configs(&self.repo)?;
-        configs
-            .iter()
-            .for_each(|config| debug!("{}", config.config_file_path()));
+        if log_enabled!(Level::Debug) {
+            configs
+                .iter()
+                .for_each(|config| debug!("{}", config.config_file_path()));
+        }
         let index = self.repo.index()?;
         let result: Vec<ValidationResult> = configs
             .iter()
