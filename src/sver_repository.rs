@@ -213,7 +213,7 @@ impl SverRepository {
             current_path_and_excludes.insert(calculation_target.clone(), config.excludes.clone());
             path_and_excludes.insert(calculation_target.clone(), config.excludes);
             for dependency in config.dependencies {
-                let dependency_target = split_path_and_profile(&dependency);
+                let dependency_target = CalculationTarget::parse_from_setting(&dependency);
                 self.collect_path_and_excludes(&dependency_target, path_and_excludes)?;
             }
         } else {

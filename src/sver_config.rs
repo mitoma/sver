@@ -12,7 +12,10 @@ use git2::{Index, Repository};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-use crate::{is_samefile, match_samefile_or_include_dir, split_path_and_profile, SEPARATOR_BYTE};
+use crate::{
+    is_samefile, match_samefile_or_include_dir, split_path_and_profile, SEPARATOR_BYTE,
+    SEPARATOR_STR,
+};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct CalculationTarget {
@@ -23,6 +26,14 @@ pub struct CalculationTarget {
 impl CalculationTarget {
     pub fn new(path: String, profile: String) -> Self {
         Self { path, profile }
+    }
+
+    pub fn parse_from_setting(value: &str) -> Self {
+        let CalculationTarget { path, profile } = split_path_and_profile(value);
+        CalculationTarget {
+            path: path.trim_end_matches(SEPARATOR_STR).to_string(),
+            profile,
+        }
     }
 }
 
@@ -187,7 +198,8 @@ impl ProfileConfig {
 
         for entry in index.iter() {
             result.invalid_dependencies.retain(|dependency| {
-                let CalculationTarget { path, profile } = split_path_and_profile(dependency);
+                let CalculationTarget { path, profile } =
+                    CalculationTarget::parse_from_setting(dependency);
                 if profile == "default" {
                     !match_samefile_or_include_dir(&entry.path, path.as_bytes())
                 } else {
