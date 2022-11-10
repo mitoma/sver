@@ -1,13 +1,13 @@
 // sver.toml ファイルの操作を扱うモジュール
 use std::{
     collections::{btree_map::Iter, BTreeMap},
-    error::Error,
     fmt::Display,
     fs::File,
     io::Write,
     path::{Path, PathBuf},
 };
 
+use anyhow::Context;
 use git2::{Index, Repository};
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -66,7 +66,7 @@ impl SverConfig {
         self.profiles.iter()
     }
 
-    pub(crate) fn write_initial_config(path: &Path) -> Result<bool, Box<dyn Error>> {
+    pub(crate) fn write_initial_config(path: &Path) -> anyhow::Result<bool> {
         let mut config = Self::default();
         config.add("default", ProfileConfig::default());
 
@@ -80,12 +80,12 @@ impl SverConfig {
         Ok(true)
     }
 
-    fn entry_parent(path: &str) -> Result<String, Box<dyn Error>> {
+    fn entry_parent(path: &str) -> anyhow::Result<String> {
         let mut path_buf = PathBuf::new();
         path_buf.push(path);
         let result = path_buf.parent().and_then(|path| path.to_str());
         let result = result.map(|s| s.to_string());
-        result.ok_or_else(|| "invalid path".into())
+        result.with_context(|| "invalid path")
     }
 
     pub(crate) fn config_file_path(&self) -> String {
@@ -96,7 +96,7 @@ impl SverConfig {
         }
     }
 
-    pub(crate) fn load_all_configs(repo: &Repository) -> Result<Vec<Self>, Box<dyn Error>> {
+    pub(crate) fn load_all_configs(repo: &Repository) -> anyhow::Result<Vec<Self>> {
         let mut result: Vec<Self> = Vec::new();
         for entry in repo.index()?.iter() {
             let is_sver_config_in_root_directory = entry.path == "sver.toml".as_bytes();
@@ -171,15 +171,12 @@ impl Display for ValidationResult {
 }
 
 impl ProfileConfig {
-    pub(crate) fn load_profile(
-        content: &[u8],
-        profile: &str,
-    ) -> Result<ProfileConfig, Box<dyn Error>> {
+    pub(crate) fn load_profile(content: &[u8], profile: &str) -> anyhow::Result<ProfileConfig> {
         let config = toml::from_slice::<SverConfig>(content)?;
         debug!("loaded_config:{:?}, profile:{}", config, profile);
         config
             .get(profile)
-            .ok_or_else(|| format!("profile[{}] is not found", profile).into())
+            .with_context(|| format!("profile[{}] is not found", profile))
     }
 
     pub(crate) fn validate(

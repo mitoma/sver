@@ -1,9 +1,9 @@
 use std::{
     collections::{BTreeMap, HashMap},
-    error::Error,
     path::{Component, Path, PathBuf},
 };
 
+use anyhow::Context;
 use git2::Repository;
 use log::debug;
 use sha2::{Digest, Sha256};
@@ -23,7 +23,7 @@ pub struct SverRepository {
 }
 
 impl SverRepository {
-    pub fn new(path: &str) -> Result<Self, Box<dyn Error>> {
+    pub fn new(path: &str) -> anyhow::Result<Self> {
         let calculation_target = split_path_and_profile(path);
 
         let target_path = Path::new(&calculation_target.path);
@@ -37,7 +37,7 @@ impl SverRepository {
         let work_dir = repo
             .workdir()
             .and_then(|p| p.to_str())
-            .ok_or("bare repository")?
+            .with_context(|| "bare repository")?
             .to_string();
         debug!("repository_root:{}", work_dir);
         debug!("target_path:{}", target_path);
@@ -50,7 +50,7 @@ impl SverRepository {
         })
     }
 
-    pub fn init_sver_config(&self) -> Result<String, Box<dyn Error>> {
+    pub fn init_sver_config(&self) -> anyhow::Result<String> {
         debug!("path:{}", self.calculation_target.path);
         let mut path_buf = PathBuf::new();
         path_buf.push(&self.calculation_target.path);
@@ -76,7 +76,7 @@ impl SverRepository {
         ))
     }
 
-    pub fn validate_sver_config(&self) -> Result<Vec<ValidationResult>, Box<dyn Error>> {
+    pub fn validate_sver_config(&self) -> anyhow::Result<Vec<ValidationResult>> {
         let configs = SverConfig::load_all_configs(&self.repo)?;
         configs
             .iter()
@@ -97,16 +97,16 @@ impl SverRepository {
         Ok(result)
     }
 
-    pub fn list_sources(&self) -> Result<Vec<String>, Box<dyn Error>> {
+    pub fn list_sources(&self) -> anyhow::Result<Vec<String>> {
         let entries = self.list_sorted_entries()?;
-        let result: Vec<String> = entries
+        let result = entries
             .iter()
             .map(|(path, _oid)| String::from_utf8(path.clone()).unwrap())
             .collect();
         Ok(result)
     }
 
-    pub fn calc_version(&self) -> Result<Version, Box<dyn Error>> {
+    pub fn calc_version(&self) -> anyhow::Result<Version> {
         let entries = self.list_sorted_entries()?;
         let version = self.calc_hash_string(&entries)?;
 
@@ -118,10 +118,7 @@ impl SverRepository {
         Ok(version)
     }
 
-    fn calc_hash_string(
-        &self,
-        source: &BTreeMap<Vec<u8>, OidAndMode>,
-    ) -> Result<String, Box<dyn Error>> {
+    fn calc_hash_string(&self, source: &BTreeMap<Vec<u8>, OidAndMode>) -> anyhow::Result<String> {
         let mut hasher = Sha256::default();
         hasher.update(self.calculation_target.path.as_bytes());
         for (path, oid_and_mode) in source {
@@ -157,7 +154,7 @@ impl SverRepository {
         Ok(hash)
     }
 
-    fn list_sorted_entries(&self) -> Result<BTreeMap<Vec<u8>, OidAndMode>, Box<dyn Error>> {
+    fn list_sorted_entries(&self) -> anyhow::Result<BTreeMap<Vec<u8>, OidAndMode>> {
         let mut path_set: HashMap<CalculationTarget, Vec<String>> = HashMap::new();
         self.collect_path_and_excludes(&self.calculation_target, &mut path_set)?;
         debug!("dependency_paths:{:?}", path_set);
@@ -188,7 +185,7 @@ impl SverRepository {
         &self,
         calculation_target: &CalculationTarget,
         path_and_excludes: &mut HashMap<CalculationTarget, Vec<String>>,
-    ) -> Result<(), Box<dyn Error>> {
+    ) -> anyhow::Result<()> {
         if path_and_excludes.contains_key(calculation_target) {
             debug!(
                 "already added. path:{}, profile:{}",

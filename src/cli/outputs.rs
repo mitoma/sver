@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::Serialize;
 use sver::Version;
 
@@ -29,7 +27,7 @@ pub(crate) fn format_versions(
     versions: &[Version],
     output_format: OutputFormat,
     version_length: VersionLength,
-) -> Result<String, Box<dyn Error>> {
+) -> anyhow::Result<String> {
     let output: Vec<VersionOutput> = versions
         .iter()
         .map(|v| {
