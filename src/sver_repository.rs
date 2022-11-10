@@ -5,13 +5,13 @@ use std::{
 
 use anyhow::Context;
 use git2::Repository;
-use log::debug;
+use log::{debug, log_enabled, Level};
 use sha2::{Digest, Sha256};
 
 use crate::{
     containable,
     filemode::FileMode,
-    find_repository, relative_path, split_path_and_profile,
+    find_repository, relative_path,
     sver_config::{CalculationTarget, ProfileConfig, SverConfig, ValidationResult},
     OidAndMode, Version, SEPARATOR_STR,
 };
@@ -24,7 +24,7 @@ pub struct SverRepository {
 
 impl SverRepository {
     pub fn new(path: &str) -> anyhow::Result<Self> {
-        let calculation_target = split_path_and_profile(path);
+        let calculation_target = CalculationTarget::parse(path);
 
         let target_path = Path::new(&calculation_target.path);
         let repo = find_repository(target_path)?;
@@ -78,9 +78,11 @@ impl SverRepository {
 
     pub fn validate_sver_config(&self) -> anyhow::Result<Vec<ValidationResult>> {
         let configs = SverConfig::load_all_configs(&self.repo)?;
-        configs
-            .iter()
-            .for_each(|config| debug!("{}", config.config_file_path()));
+        if log_enabled!(Level::Debug) {
+            configs
+                .iter()
+                .for_each(|config| debug!("{}", config.config_file_path()));
+        }
         let index = self.repo.index()?;
         let result: Vec<ValidationResult> = configs
             .iter()
@@ -136,7 +138,7 @@ impl SverRepository {
                         oid_and_mode.oid
                     )
                 }
-                // Commit (Submodule の場合は参照先のコミットハッシュを計算対象に加える)
+                // Commit (For submodules, include the commit hash in the calculation source.)
                 FileMode::Commit => {
                     debug!("commit_hash?:{}", oid_and_mode.oid);
                     hasher.update(oid_and_mode.oid);

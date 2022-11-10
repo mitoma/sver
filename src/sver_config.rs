@@ -1,4 +1,3 @@
-// sver.toml ファイルの操作を扱うモジュール
 use std::{
     collections::{btree_map::Iter, BTreeMap},
     fmt::Display,
@@ -10,12 +9,10 @@ use std::{
 use anyhow::Context;
 use git2::{Index, Repository};
 use log::debug;
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    is_samefile, match_samefile_or_include_dir, split_path_and_profile, SEPARATOR_BYTE,
-    SEPARATOR_STR,
-};
+use crate::{is_samefile, match_samefile_or_include_dir, SEPARATOR_BYTE, SEPARATOR_STR};
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct CalculationTarget {
@@ -28,8 +25,20 @@ impl CalculationTarget {
         Self { path, profile }
     }
 
+    pub fn parse(value: &str) -> Self {
+        let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
+        let caps = regex.captures(value);
+        caps.map(|caps| {
+            CalculationTarget::new(
+                caps.get(1).unwrap().as_str().to_string(),
+                caps.get(2).unwrap().as_str().to_string(),
+            )
+        })
+        .unwrap_or_else(|| CalculationTarget::new(value.to_string(), "default".to_string()))
+    }
+
     pub fn parse_from_setting(value: &str) -> Self {
-        let CalculationTarget { path, profile } = split_path_and_profile(value);
+        let CalculationTarget { path, profile } = CalculationTarget::parse(value);
         CalculationTarget {
             path: path.trim_end_matches(SEPARATOR_STR).to_string(),
             profile,
@@ -256,7 +265,7 @@ impl ProfileConfig {
 }
 
 #[cfg(test)]
-mod test {
+mod sver_config_tests {
     use crate::sver_config::{ProfileConfig, SverConfig};
 
     #[test]
@@ -285,5 +294,30 @@ excludes = ["exclude2"]
 
         let toml_str = toml::to_string_pretty(&configs).unwrap();
         println!("{}", toml_str);
+    }
+}
+
+#[cfg(test)]
+mod calculation_target_tests {
+    use crate::sver_config::CalculationTarget;
+
+    #[test]
+    fn test_split() {
+        assert_eq!(
+            CalculationTarget::parse("hello"),
+            CalculationTarget::new("hello".to_string(), "default".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse("hello:world"),
+            CalculationTarget::new("hello".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse(r"c:\hello"),
+            CalculationTarget::new(r"c:\hello".to_string(), "default".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse(r"c:\hello:world-wide"),
+            CalculationTarget::new(r"c:\hello".to_string(), "world-wide".to_string())
+        );
     }
 }
