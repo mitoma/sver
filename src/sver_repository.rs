@@ -76,7 +76,7 @@ impl SverRepository {
         ))
     }
 
-    pub fn validate_sver_config(&self) -> anyhow::Result<Vec<ValidationResult>> {
+    pub fn validate_sver_config(&self) -> anyhow::Result<(bool, Vec<ValidationResult>)> {
         let configs = SverConfig::load_all_configs(&self.repo)?;
         if log_enabled!(Level::Debug) {
             configs
@@ -96,7 +96,10 @@ impl SverRepository {
                     .collect::<Vec<ValidationResult>>()
             })
             .collect();
-        Ok(result)
+        let success = result
+            .iter()
+            .all(|s| matches!(s, ValidationResult::Valid { .. }));
+        Ok((success, result))
     }
 
     pub fn list_sources(&self) -> anyhow::Result<Vec<String>> {

@@ -1,5 +1,6 @@
 mod cli;
 
+use anyhow::anyhow;
 use std::process::ExitCode;
 
 use crate::cli::outputs::format_versions;
@@ -61,9 +62,10 @@ fn init(path: &str) -> anyhow::Result<()> {
 }
 
 fn validate() -> anyhow::Result<()> {
-    SverRepository::new(".")?
-        .validate_sver_config()?
-        .iter()
-        .for_each(|s| print!("{}", s));
+    let (success, results) = SverRepository::new(".")?.validate_sver_config()?;
+    results.iter().for_each(|s| print!("{}", s));
+    if !success {
+        return Err(anyhow!("There are some invalid configs"));
+    }
     Ok(())
 }
