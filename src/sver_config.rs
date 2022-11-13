@@ -171,7 +171,7 @@ impl Display for ValidationResult {
                 invalid_dependencies,
                 invalid_excludes,
             } => {
-                writeln!(f, "[NG]\t{}/sver.toml:[{}]", path, profile)?;
+                writeln!(f, "[Fail]\t{}/sver.toml:[{}]", path, profile)?;
                 writeln!(f, "\t\tinvalid_dependency:{:?}", invalid_dependencies)?;
                 writeln!(f, "\t\tinvalid_exclude:{:?}", invalid_excludes)
             }
