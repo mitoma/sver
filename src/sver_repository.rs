@@ -76,7 +76,7 @@ impl SverRepository {
         ))
     }
 
-    pub fn validate_sver_config(&self) -> anyhow::Result<Vec<ValidationResult>> {
+    pub fn validate_sver_config(&self) -> anyhow::Result<ValidationResults> {
         let configs = SverConfig::load_all_configs(&self.repo)?;
         if log_enabled!(Level::Debug) {
             configs
@@ -84,7 +84,7 @@ impl SverRepository {
                 .for_each(|config| debug!("{}", config.config_file_path()));
         }
         let index = self.repo.index()?;
-        let result: Vec<ValidationResult> = configs
+        let results: Vec<ValidationResult> = configs
             .iter()
             .flat_map(|sver_config| {
                 let target_path = sver_config.target_path.clone();
@@ -96,7 +96,13 @@ impl SverRepository {
                     .collect::<Vec<ValidationResult>>()
             })
             .collect();
-        Ok(result)
+        let has_invalid = results
+            .iter()
+            .any(|s| matches!(s, ValidationResult::Invalid { .. }));
+        Ok(ValidationResults {
+            has_invalid,
+            results,
+        })
     }
 
     pub fn list_sources(&self) -> anyhow::Result<Vec<String>> {
@@ -260,4 +266,9 @@ impl SverRepository {
         }
         Ok(())
     }
+}
+
+pub struct ValidationResults {
+    pub has_invalid: bool,
+    pub results: Vec<ValidationResult>,
 }
