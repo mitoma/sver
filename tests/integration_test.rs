@@ -5,6 +5,7 @@ use std::{env::temp_dir, fs::create_dir};
 use chrono::{TimeZone, Utc};
 use git2::Repository;
 use log::debug;
+use sver::sver_repository::ValidationResults;
 use sver::{
     sver_config::{CalculationTarget, ValidationResult},
     sver_repository::SverRepository,
@@ -530,14 +531,17 @@ fn valid_dependencies_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, true);
-    assert_eq!(result.len(), 1);
+    assert_eq!(has_invalid, false);
+    assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
@@ -572,16 +576,19 @@ fn invalid_dependencies_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, false);
-    assert_eq!(result.len(), 1);
+    assert_eq!(has_invalid, true);
+    assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         invalid_excludes,
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
@@ -618,14 +625,17 @@ fn valid_excludes_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, true);
-    assert_eq!(result.len(), 1);
+    assert_eq!(has_invalid, false);
+    assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service1");
         assert_eq!(profile, "default");
@@ -660,16 +670,19 @@ fn invalid_excludes_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service1")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, false);
-    assert_eq!(result.len(), 1);
+    assert_eq!(has_invalid, true);
+    assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         invalid_excludes,
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service1");
         assert_eq!(profile, "default");
@@ -707,14 +720,17 @@ fn valid_has_profile_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, true);
-    assert_eq!(result.len(), 2);
+    assert_eq!(has_invalid, false);
+    assert_eq!(results.len(), 2);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof1");
@@ -723,7 +739,7 @@ fn valid_has_profile_repository() {
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
@@ -759,16 +775,19 @@ fn invalid_has_profile_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, false);
-    assert_eq!(result.len(), 2);
+    assert_eq!(has_invalid, true);
+    assert_eq!(results.len(), 2);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof1");
@@ -778,7 +797,7 @@ fn invalid_has_profile_repository() {
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
@@ -822,15 +841,18 @@ fn valid_no_target_profile_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, true);
-    debug!("{:?}", result);
-    assert_eq!(result.len(), 4);
+    assert_eq!(has_invalid, false);
+    debug!("{:?}", results);
+    assert_eq!(results.len(), 4);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof2");
@@ -839,7 +861,7 @@ fn valid_no_target_profile_repository() {
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
@@ -887,17 +909,20 @@ fn invalid_no_target_profile_repository() {
     let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
 
     // exercise
-    let (success, mut result) = sver_repo.validate_sver_config().unwrap();
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(success, false);
-    debug!("{:?}", result);
-    assert_eq!(result.len(), 5);
+    assert_eq!(has_invalid, true);
+    debug!("{:?}", results);
+    assert_eq!(results.len(), 5);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof3");
@@ -909,7 +934,7 @@ fn invalid_no_target_profile_repository() {
         calcuration_target: CalculationTarget { path, profile },
         invalid_dependencies,
         ..
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof2");
@@ -919,7 +944,7 @@ fn invalid_no_target_profile_repository() {
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
-    }) = result.pop()
+    }) = results.pop()
     {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
