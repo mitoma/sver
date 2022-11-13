@@ -232,7 +232,13 @@ fn has_submodule() {
 
     let sub_repo = Repository::init(sub_repo_dir).unwrap();
     add_blob(&sub_repo, "hello.txt", "hello".as_bytes());
-    commit_at(&sub_repo, "setup", Utc.ymd(2022, 10, 1).and_hms(10, 20, 30));
+    commit_at(
+        &sub_repo,
+        "setup",
+        Utc.with_ymd_and_hms(2022, 10, 1, 10, 20, 30)
+            .earliest()
+            .unwrap(),
+    );
 
     // setup sut repo
     let mut sut_repo_dir = tmp_dir.clone();
