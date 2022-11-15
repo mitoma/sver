@@ -26,7 +26,7 @@ impl CalculationTarget {
     }
 
     pub fn parse(value: &str) -> Self {
-        let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
+        let regex = Regex::new("(.*):([a-zA-Z0-9-_]+)").unwrap();
         let caps = regex.captures(value);
         caps.map(|caps| {
             CalculationTarget::new(
@@ -318,6 +318,30 @@ mod calculation_target_tests {
         assert_eq!(
             CalculationTarget::parse(r"c:\hello:world-wide"),
             CalculationTarget::new(r"c:\hello".to_string(), "world-wide".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_from_setting() {
+        assert_eq!(
+            CalculationTarget::parse_from_setting(":world"),
+            CalculationTarget::new("".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse_from_setting("/:world"),
+            CalculationTarget::new("".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse_from_setting("////:world"),
+            CalculationTarget::new("".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse_from_setting("hello:world"),
+            CalculationTarget::new("hello".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            CalculationTarget::parse_from_setting("hello////:world"),
+            CalculationTarget::new("hello".to_string(), "world".to_string())
         );
     }
 }
