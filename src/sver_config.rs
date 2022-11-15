@@ -10,7 +10,7 @@ use anyhow::Context;
 use git2::{Index, Repository};
 use log::debug;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 use crate::{is_samefile, match_samefile_or_include_dir, SEPARATOR_BYTE, SEPARATOR_STR};
 
@@ -18,6 +18,39 @@ use crate::{is_samefile, match_samefile_or_include_dir, SEPARATOR_BYTE, SEPARATO
 pub struct CalculationTarget {
     pub path: String,
     pub profile: String,
+}
+
+impl<'de> Deserialize<'de> for CalculationTarget {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct StringVisitor;
+        impl<'de> Visitor<'de> for StringVisitor {
+            type Value = CalculationTarget;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("'<path>' or ':<profile>' or '<path>:<profile>'")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(CalculationTarget::parse_from_setting(v))
+            }
+        }
+        deserializer.deserialize_str(StringVisitor)
+    }
+}
+
+impl Serialize for CalculationTarget {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&format!("{}:{}", self.path, self.profile))
+    }
 }
 
 impl CalculationTarget {
@@ -342,6 +375,22 @@ mod calculation_target_tests {
         assert_eq!(
             CalculationTarget::parse_from_setting("hello////:world"),
             CalculationTarget::new("hello".to_string(), "world".to_string())
+        );
+    }
+
+    #[test]
+    fn test_custom_serde() {
+        assert_eq!(
+            serde_json::from_str::<CalculationTarget>("\"hello:world\"").unwrap(),
+            CalculationTarget::new("hello".to_string(), "world".to_string())
+        );
+        assert_eq!(
+            serde_json::to_string(&CalculationTarget::new(
+                "hello".to_string(),
+                "world".to_string()
+            ))
+            .unwrap(),
+            "\"hello:world\""
         );
     }
 }
