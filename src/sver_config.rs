@@ -9,6 +9,7 @@ use std::{
 use anyhow::Context;
 use git2::{Index, Repository};
 use log::debug;
+use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -20,14 +21,15 @@ pub struct CalculationTarget {
     pub profile: String,
 }
 
+static TARGET_FORMAT: Lazy<Regex> = Lazy::new(|| Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap());
+
 impl CalculationTarget {
     pub fn new(path: String, profile: String) -> Self {
         Self { path, profile }
     }
 
     pub fn parse(value: &str) -> Self {
-        let regex = Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap();
-        let caps = regex.captures(value);
+        let caps = TARGET_FORMAT.captures(value);
         caps.map(|caps| {
             CalculationTarget::new(
                 caps.get(1).unwrap().as_str().to_string(),
