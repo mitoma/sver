@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::Context;
-use git2::{Index, Repository};
+use git2::{Index, IndexEntry, Repository};
 use log::debug;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -205,64 +205,72 @@ impl ProfileConfig {
         result.invalid_excludes.extend(self.excludes.clone());
 
         for entry in index.iter() {
-            result.invalid_dependencies.retain(|dependency| {
-                let CalculationTarget { path, profile } =
-                    CalculationTarget::parse_from_setting(dependency);
-                if profile == "default" {
-                    !match_samefile_or_include_dir(&entry.path, path.as_bytes())
-                } else {
-                    if is_samefile(&entry.path, path.as_bytes()) {
-                        // file can not have profile
-                        return false;
-                    }
-
-                    let mut config_file_path: Vec<u8> = Vec::new();
-                    config_file_path.extend_from_slice(path.as_bytes());
-                    config_file_path.extend_from_slice(SEPARATOR_BYTE);
-                    config_file_path.extend_from_slice("sver.toml".as_bytes());
-                    debug!("step3");
-                    if is_samefile(&entry.path, config_file_path.as_slice()) {
-                        return if let Ok(blob) = &repo.find_blob(entry.id) {
-                            ProfileConfig::load_profile(blob.content(), &profile).is_err()
-                        } else {
-                            true
-                        };
-                    }
-                    true
-                }
-            });
-            result.invalid_excludes.retain(|exclude| {
-                let normalized_path = if path.is_empty() {
-                    exclude.as_bytes().to_vec()
-                } else {
-                    [path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()].concat()
+            result
+                .invalid_dependencies
+                .retain(|dependency| Self::is_valid_dependency(dependency, &entry, repo));
+            result
+                .invalid_excludes
+                .retain(|exclude| Self::is_valid_exclude(exclude, &entry, path));
+            if result.is_empty() {
+                return ValidationResult::Valid {
+                    calcuration_target: CalculationTarget::new(
+                        path.to_string(),
+                        profile.to_string(),
+                    ),
                 };
-
-                let is_match = match_samefile_or_include_dir(&entry.path, &normalized_path);
-
-                debug!(
-                    "exclude {}, {}, match:{}",
-                    String::from_utf8(entry.path.clone().to_vec()).unwrap(),
-                    String::from_utf8(normalized_path).unwrap(),
-                    is_match,
-                );
-                !is_match
-            });
+            }
         }
 
-        debug!("path:{}, validation_result:{:?}", path, result);
+        ValidationResult::Invalid {
+            calcuration_target: CalculationTarget::new(path.to_string(), profile.to_string()),
+            invalid_excludes: result.invalid_excludes.clone(),
+            invalid_dependencies: result.invalid_dependencies.clone(),
+        }
+    }
 
-        if result.is_empty() {
-            ValidationResult::Valid {
-                calcuration_target: CalculationTarget::new(path.to_string(), profile.to_string()),
-            }
+    #[inline]
+    fn is_valid_dependency(dependency: &str, entry: &IndexEntry, repo: &Repository) -> bool {
+        let CalculationTarget { path, profile } = CalculationTarget::parse_from_setting(dependency);
+        if profile == "default" {
+            !match_samefile_or_include_dir(&entry.path, path.as_bytes())
         } else {
-            ValidationResult::Invalid {
-                calcuration_target: CalculationTarget::new(path.to_string(), profile.to_string()),
-                invalid_excludes: result.invalid_excludes.clone(),
-                invalid_dependencies: result.invalid_dependencies.clone(),
+            if is_samefile(&entry.path, path.as_bytes()) {
+                // file can not have profile
+                return false;
             }
+
+            let mut config_file_path: Vec<u8> = Vec::new();
+            config_file_path.extend_from_slice(path.as_bytes());
+            config_file_path.extend_from_slice(SEPARATOR_BYTE);
+            config_file_path.extend_from_slice("sver.toml".as_bytes());
+            if is_samefile(&entry.path, config_file_path.as_slice()) {
+                return if let Ok(blob) = &repo.find_blob(entry.id) {
+                    ProfileConfig::load_profile(blob.content(), &profile).is_err()
+                } else {
+                    true
+                };
+            }
+            true
         }
+    }
+
+    #[inline]
+    fn is_valid_exclude(exclude: &str, entry: &IndexEntry, path: &str) -> bool {
+        let normalized_path = if path.is_empty() {
+            exclude.as_bytes().to_vec()
+        } else {
+            [path.as_bytes(), SEPARATOR_BYTE, exclude.as_bytes()].concat()
+        };
+
+        let is_match = match_samefile_or_include_dir(&entry.path, &normalized_path);
+
+        debug!(
+            "exclude {}, {}, match:{}",
+            String::from_utf8(entry.path.clone().to_vec()).unwrap(),
+            String::from_utf8(normalized_path).unwrap(),
+            is_match,
+        );
+        !is_match
     }
 }
 
