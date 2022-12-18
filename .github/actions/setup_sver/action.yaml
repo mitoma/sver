@@ -5,7 +5,7 @@ inputs:
   version:
     description: 'sver release version'
     required: false
-    default: 'v0.1.11'
+    default: 'v0.1.12'
   os:
     description: 'sver release os'
     required: false
