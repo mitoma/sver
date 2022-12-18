@@ -1,35 +1,33 @@
 #!/bin/bash
 set -eux
+
 TAG="$1"
 REPO_ROOT=$(git rev-parse --show-toplevel)
 VERSION=$(sver calc .)
-LINUX_TMP=$(mktemp -d)
-WINDOWS_TMP=$(mktemp -d)
-MACOS_TMP=$(mktemp -d)
+ARTIFACT_DIR=$(mktemp -d)
+trap 'rm -rf "$ARTIFACT_DIR"' EXIT
 
-cd "$REPO_ROOT"
-gh run download -n "sver-linux-${VERSION}" --dir "$LINUX_TMP"
-cd "$LINUX_TMP"
-chmod +x sver
-zip "sver_${TAG}_linux_amd64.zip" ./*
-echo "$LINUX_TMP/sver_${TAG}_linux_amd64.zip"
+TARGET_OS_ARCHES=(
+  "x86_64-unknown-linux-gnu linux amd64"
+  "x86_64-pc-windows-gnu windows amd64"
+  "x86_64-apple-darwin macos amd64"
+  "aarch64-unknown-linux-gnu linux arm64"
+  "aarch64-apple-darwin macos arm64"
+)
 
-cd "$REPO_ROOT"
-gh run download -n "sver-windows-${VERSION}" --dir "$WINDOWS_TMP"
-cd "$WINDOWS_TMP"
-zip "sver_${TAG}_windows_amd64.zip" ./*
-echo "$WINDOWS_TMP/sver_${TAG}_windows_amd64.zip"
-
-cd "$REPO_ROOT"
-gh run download -n "sver-macos-${VERSION}" --dir "$MACOS_TMP"
-cd "$MACOS_TMP"
-chmod +x sver
-zip "sver_${TAG}_macos_amd64.zip" ./*
-echo "$MACOS_TMP/sver_${TAG}_macos_amd64.zip"
+for TARGET_OS_ARCH in "${TARGET_OS_ARCHES[@]}"; do
+  read -r TARGET OS ARCH <<<"$TARGET_OS_ARCH"
+  cd "$REPO_ROOT"
+  DIR=$(mktemp -d)
+  gh run download --name "sver-${TARGET}-${VERSION}" --dir "$DIR"
+  cd "$DIR"
+  if [[ "$OS" != windows ]]; then
+    chmod +x sver
+  fi
+  zip "${ARTIFACT_DIR}/sver_${TAG}_${OS}_${ARCH}.zip" ./*
+  rm -rf "$DIR"
+done
 
 cd "$REPO_ROOT"
 gh release create "$TAG" --generate-notes
-gh release upload "$TAG" \
-   "$LINUX_TMP/sver_${TAG}_linux_amd64.zip" \
-   "$WINDOWS_TMP/sver_${TAG}_windows_amd64.zip" \
-   "$MACOS_TMP/sver_${TAG}_macos_amd64.zip"
+gh release upload "$TAG" "$ARTIFACT_DIR"/*

@@ -12,40 +12,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - linux
-          - windows
-          - macos
-        include:
-          - target: linux
-            os: ubuntu-20.04
-          - target: windows
-            os: windows-latest
-          - target: macos
-            os: macos-latest
+        job:
+          - target: x86_64-unknown-linux-gnu
+            os: linux
+            runs-on: ubuntu-20.04
+          - target: x86_64-pc-windows-gnu
+            os: windows
+            runs-on: windows-latest
+          - target: x86_64-apple-darwin
+            os: macos
+            runs-on: macos-latest
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.job.runs-on }}
 
     steps:
       - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup_sver
         with:
-          os: ${{ matrix.target }}
+          os: ${{ matrix.job.os }}
 
       # ci phase
       - name: check all
         uses: ./.github/actions/exec_sver
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          phase: check-${{ matrix.target }}
+          phase: check-${{ matrix.job.target }}
           command: |
             cargo fmt --all -- --check
             cargo clippy -- -D warnings
             cargo build
             cargo test
-          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_key: ${{ matrix.job.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ matrix.job.target }}-cargo-
           cache_path: |
             ~/.cargo/registry
             ~/.cargo/git
@@ -61,51 +60,63 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - linux
-          - windows
-          - macos
-        include:
-          - target: linux
-            os: ubuntu-20.04
-          - target: windows
-            os: windows-latest
-          - target: macos
-            os: macos-latest
+        job:
+          - target: x86_64-unknown-linux-gnu
+            os: linux
+            runs-on: ubuntu-20.04
+          - target: x86_64-pc-windows-gnu
+            os: windows
+            runs-on: windows-latest
+          - target: x86_64-apple-darwin
+            os: macos
+            runs-on: macos-latest
+          - target: aarch64-unknown-linux-gnu
+            os: linux
+            runs-on: ubuntu-20.04
+          - target: aarch64-apple-darwin
+            os: macos
+            runs-on: macos-latest
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.job.runs-on }}
 
     steps:
       - uses: actions/checkout@v3
 
       - uses: ./.github/actions/setup_sver
         with:
-          os: ${{ matrix.target }}
+          os: ${{ matrix.job.os }}
 
       # artifact phase
       - name: build artifact
         uses: ./.github/actions/exec_sver
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          phase: artifact-${{ matrix.target }}
+          phase: artifact-${{ matrix.job.target }}
           command: |
-            cargo build --release
+            if [[ "${{ matrix.job.target }}" == aarch64-* ]]; then
+              rustup target add "${{ matrix.job.target }}"
+              if [[ "${{ matrix.job.os }}" == linux ]]; then
+                sudo apt-get install gcc-aarch64-linux-gnu
+                export RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc"
+              fi
+            fi
+            cargo build --release --target=${{ matrix.job.target }}
             mkdir artifact
             cd artifact
             cp ../LICENSE .
             cp ../README.md .
-            if [ "${{ matrix.target }}" = "windows" ]; then
-              cp ../target/release/sver.exe .
+            if [[ "${{ matrix.job.os }}" == windows ]]; then
+              cp ../target/${{ matrix.job.target }}/release/sver.exe .
             else
-              cp ../target/release/sver .
+              cp ../target/${{ matrix.job.target }}/release/sver .
             fi
-          cache_key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          cache_restore-keys: ${{ runner.os }}-cargo-
+          cache_key: ${{ matrix.job.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          cache_restore-keys: ${{ matrix.job.target }}-cargo-
           cache_path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          artifact_name: sver-${{ matrix.target }}
+          artifact_name: sver-${{ matrix.job.target }}
           artifact_path: artifact
 
   # release sver
@@ -118,6 +129,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - uses: ./.github/actions/setup_sver
 
       - id: extract_tag
         name: Extract tag name

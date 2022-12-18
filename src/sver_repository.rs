@@ -108,8 +108,8 @@ impl SverRepository {
     pub fn list_sources(&self) -> anyhow::Result<Vec<String>> {
         let entries = self.list_sorted_entries()?;
         let result = entries
-            .iter()
-            .map(|(path, _oid)| String::from_utf8(path.clone()).unwrap())
+            .keys()
+            .map(|path| String::from_utf8(path.clone()).unwrap())
             .collect();
         Ok(result)
     }
