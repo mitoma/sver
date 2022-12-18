@@ -11,11 +11,17 @@ pub enum FileMode {
     Unknown,
 }
 
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_BLOB: u32 = libgit2_sys::GIT_FILEMODE_BLOB as u32;
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_BLOB_EXECUTABLE: u32 = libgit2_sys::GIT_FILEMODE_BLOB_EXECUTABLE as u32;
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_COMMIT: u32 = libgit2_sys::GIT_FILEMODE_COMMIT as u32;
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_LINK: u32 = libgit2_sys::GIT_FILEMODE_LINK as u32;
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_TREE: u32 = libgit2_sys::GIT_FILEMODE_TREE as u32;
+#[allow(clippy::unnecessary_cast)]
 const GIT_FILEMODE_UNREADABLE: u32 = libgit2_sys::GIT_FILEMODE_UNREADABLE as u32;
 
 impl From<u32> for FileMode {
