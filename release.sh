@@ -28,6 +28,9 @@ for TARGET_OS_ARCH in "${TARGET_OS_ARCHES[@]}"; do
   rm -rf "$DIR"
 done
 
+cd "${ARTIFACT_DIR}"
+sha256sum * > SHASUMS256.txt
+
 cd "$REPO_ROOT"
 gh release create "$TAG" --generate-notes
 gh release upload "$TAG" "$ARTIFACT_DIR"/*
