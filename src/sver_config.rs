@@ -125,9 +125,10 @@ impl SverConfig {
                 let target_path = Self::entry_parent(&String::from_utf8(entry.path.clone())?)?;
                 let blob = repo.find_blob(entry.id)?;
 
-                debug!("content:{}", String::from_utf8(blob.content().to_vec())?);
+                let content_str = String::from_utf8(blob.content().to_vec())?;
+                debug!("content:{}", content_str);
 
-                let mut config = toml::from_slice::<Self>(blob.content())?;
+                let mut config = toml::from_str::<Self>(&content_str)?;
                 config.target_path = target_path;
                 result.push(config);
             }
@@ -183,7 +184,8 @@ impl Display for ValidationResult {
 
 impl ProfileConfig {
     pub(crate) fn load_profile(content: &[u8], profile: &str) -> anyhow::Result<ProfileConfig> {
-        let config = toml::from_slice::<SverConfig>(content)?;
+        let content_str = String::from_utf8(content.to_vec())?;
+        let config = toml::from_str::<SverConfig>(&content_str)?;
         debug!("loaded_config:{:?}, profile:{}", config, profile);
         config
             .get(profile)
@@ -287,7 +289,7 @@ excludes = ["exclude1"]
 dependencies = ["dep2"]
 excludes = ["exclude2"]
 "#;
-        let configs = toml::from_slice::<SverConfig>(test.as_bytes()).unwrap();
+        let configs = toml::from_str::<SverConfig>(test).unwrap();
         assert_eq!(configs.profiles.len(), 2);
         assert_eq!(
             configs.profiles.keys().cloned().collect::<Vec<String>>(),
