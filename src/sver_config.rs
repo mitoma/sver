@@ -166,16 +166,16 @@ impl Display for ValidationResult {
             ValidationResult::Valid {
                 calcuration_target: CalculationTarget { path, profile },
             } => {
-                writeln!(f, "[OK]\t{}/sver.toml:[{}]", path, profile)
+                writeln!(f, "[OK]\t{path}/sver.toml:[{profile}]")
             }
             ValidationResult::Invalid {
                 calcuration_target: CalculationTarget { path, profile },
                 invalid_dependencies,
                 invalid_excludes,
             } => {
-                writeln!(f, "[Fail]\t{}/sver.toml:[{}]", path, profile)?;
-                writeln!(f, "\t\tinvalid_dependency:{:?}", invalid_dependencies)?;
-                writeln!(f, "\t\tinvalid_exclude:{:?}", invalid_excludes)
+                writeln!(f, "[Fail]\t{path}/sver.toml:[{profile}]")?;
+                writeln!(f, "\t\tinvalid_dependency:{invalid_dependencies:?}")?;
+                writeln!(f, "\t\tinvalid_exclude:{invalid_excludes:?}")
             }
         }
     }
@@ -187,7 +187,7 @@ impl ProfileConfig {
         debug!("loaded_config:{:?}, profile:{}", config, profile);
         config
             .get(profile)
-            .with_context(|| format!("profile[{}] is not found", profile))
+            .with_context(|| format!("profile[{profile}] is not found"))
     }
 
     pub(crate) fn validate(
@@ -303,7 +303,7 @@ excludes = ["exclude2"]
         assert!(configs.target_path.is_empty());
 
         let toml_str = toml::to_string_pretty(&configs).unwrap();
-        println!("{}", toml_str);
+        println!("{toml_str}");
     }
 }
 

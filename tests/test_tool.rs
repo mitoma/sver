@@ -20,7 +20,7 @@ pub fn initialize() {
 pub fn setup_test_repository() -> Repository {
     let mut tmp_dir = temp_dir();
     let uuid = Uuid::new_v4();
-    tmp_dir.push(format!("sver-{}", uuid.to_string()));
+    tmp_dir.push(format!("sver-{uuid}"));
 
     let repository_path = tmp_dir.as_path();
 
@@ -61,7 +61,7 @@ pub fn add_submodule(
 ) {
     let mut index = repo.index().unwrap();
     let path_obj = Path::new(path);
-    let mut submodule = repo.submodule(&external_repo_url, &path_obj, true).unwrap();
+    let mut submodule = repo.submodule(external_repo_url, path_obj, true).unwrap();
     submodule.clone(None).unwrap();
     submodule.add_finalize().unwrap();
     let submodule_repo = submodule.open().unwrap();

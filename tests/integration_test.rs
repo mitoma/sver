@@ -223,7 +223,7 @@ fn has_submodule() {
     // setup
     let mut tmp_dir = temp_dir();
     let uuid = Uuid::new_v4();
-    tmp_dir.push(format!("sver-{}", uuid.to_string()));
+    tmp_dir.push(format!("sver-{}", uuid));
     create_dir(tmp_dir.clone()).unwrap();
 
     // setup external repo
