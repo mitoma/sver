@@ -30,7 +30,7 @@ fn main() -> ExitCode {
     match result {
         Ok(_) => ExitCode::SUCCESS,
         Err(e) => {
-            println!("{}", e);
+            println!("{e}");
             ExitCode::FAILURE
         }
     }
@@ -55,7 +55,7 @@ fn list(path: &str) -> anyhow::Result<()> {
     SverRepository::new(path)?
         .list_sources()?
         .iter()
-        .for_each(|s| println!("{}", s));
+        .for_each(|s| println!("{s}"));
     Ok(())
 }
 
@@ -69,7 +69,7 @@ fn validate() -> anyhow::Result<()> {
         has_invalid,
         results,
     } = SverRepository::new(".")?.validate_sver_config()?;
-    results.iter().for_each(|s| print!("{}", s));
+    results.iter().for_each(|s| print!("{s}"));
     if has_invalid {
         return Err(anyhow!("There are some invalid configs"));
     }
