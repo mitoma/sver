@@ -14,6 +14,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: echo deprecated message
+      shell: bash
+      run: echo "::warning title=deprecated action::mitoma/sver/.github/actions/setup_sver is deprecated. Please use mitoma/sver-actions/setup"
     - name: install sver (linux and macos)
       if: ${{ inputs.os == 'linux' || inputs.os == 'macos' }}
       shell: bash

@@ -43,6 +43,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - name: echo deprecated message
+      shell: bash
+      run: echo "::warning title=deprecated action::mitoma/sver/.github/actions/exec_sver is deprecated. Please use mitoma/sver-actions/exec"
     - name: Create ci-result dir
       shell: bash
       run: mkdir -p ci-result
