@@ -101,6 +101,9 @@ jobs:
                 export RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc"
               fi
             fi
+            # debug build for cache optimization
+            cargo build --target=${{ matrix.job.target }}
+            # release build for create artifact
             cargo build --release --target=${{ matrix.job.target }}
             mkdir artifact
             cd artifact
