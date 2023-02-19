@@ -175,3 +175,7 @@ dependencies = []
 [build]
 excludes = ["README.md", "tests"]
 ```
+
+### Use on GitHub Actions
+
+If you want to use GitHub Actions, you can use [sver-actions](https://github.com/mitoma/sver-actions).
