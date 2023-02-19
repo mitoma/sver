@@ -43,6 +43,7 @@ jobs:
             cargo clippy -- -D warnings
             cargo build
             cargo test
+          cache_save_enable: false
           cache_key: ${{ matrix.job.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           cache_restore-keys: ${{ matrix.job.target }}-cargo-
           cache_path: |
