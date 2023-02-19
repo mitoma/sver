@@ -28,13 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/setup_sver
+      - uses: mitoma/sver-actions/setup@v1
         with:
           os: ${{ matrix.job.os }}
 
       # ci phase
       - name: check all
-        uses: ./.github/actions/exec_sver
+        uses: mitoma/sver-actions/exec@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           phase: check-${{ matrix.job.target }}
@@ -43,6 +43,7 @@ jobs:
             cargo clippy -- -D warnings
             cargo build
             cargo test
+          cache_save_enable: false
           cache_key: ${{ matrix.job.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           cache_restore-keys: ${{ matrix.job.target }}-cargo-
           cache_path: |
@@ -82,13 +83,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/setup_sver
+      - uses: mitoma/sver-actions/setup@v1
         with:
           os: ${{ matrix.job.os }}
 
       # artifact phase
       - name: build artifact
-        uses: ./.github/actions/exec_sver
+        uses: mitoma/sver-actions/exec@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           phase: artifact-${{ matrix.job.target }}
@@ -130,7 +131,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: ./.github/actions/setup_sver
+      - uses: mitoma/sver-actions/setup@v1
 
       - id: extract_tag
         name: Extract tag name
