@@ -98,6 +98,8 @@ linux 以外の OS を使いたかったり、特定のバージョンをイン�
     artifact_path: path/to/artifact
 ```
 
+以上、本アクションが皆さんの快適な CI ライフの一助となれば幸いです。
+
 [同じビルドやテストを何度も実行しない方法]: https://mitomasan.hatenablog.com/entry/2022/07/15/080000
 [sver]: https://github.com/mitoma/sver
 [sver-actions]: https://github.com/mitoma/sver-actions
