@@ -7,7 +7,7 @@ version = "0.1.14"
 
 [dependencies]
 anyhow = "1.0.70"
-clap = {version = "4.1.11", features = ["derive"]}
+clap = {version = "4.2.1", features = ["derive"]}
 env_logger = "0.10.0"
 git2 = "0.16.1"
 libgit2-sys = {version = "0.14.2", features = ["vendored-openssl"]}
