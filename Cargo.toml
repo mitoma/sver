@@ -20,7 +20,7 @@ sha2 = "0.10.6"
 toml = "0.7.3"
 
 [dev-dependencies]
-chrono = "0.4.23"
+chrono = "0.4.24"
 
 [dev-dependencies.uuid]
 features = [
