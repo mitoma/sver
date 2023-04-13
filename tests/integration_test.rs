@@ -1034,12 +1034,7 @@ fn invalid_ref_to_no_config_repository() {
 
     // setup
     let repo = setup_test_repository();
-    add_blob(
-        &repo,
-        "service1/README.md",
-        "hello"
-            .as_bytes(),
-    );
+    add_blob(&repo, "service1/README.md", "hello".as_bytes());
     add_blob(
         &repo,
         "service2/sver.toml",
