@@ -1,0 +1,2 @@
+[no-default]
+dependencies = ["testdata/lib1"]
