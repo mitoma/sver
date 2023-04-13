@@ -961,6 +961,60 @@ fn invalid_no_target_profile_repository() {
 
 // repo layout
 // .
+// + service1/sver.toml → no default
+// + service2/sver.toml → dependency = [ "service1:default" ]
+#[test]
+fn invalid_no_default_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(
+        &repo,
+        "service1/sver.toml",
+        "
+        [no-default]
+        dependencies = []"
+            .as_bytes(),
+    );
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"service1:default\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    let sver_repo = SverRepository::new(&calc_target_path(&repo, "service2")).unwrap();
+
+    // exercise
+    let ValidationResults {
+        has_invalid,
+        mut results,
+    } = sver_repo.validate_sver_config().unwrap();
+
+    // verify
+    assert_eq!(has_invalid, true);
+    assert_eq!(results.len(), 1);
+
+    if let Some(ValidationResult::Invalid {
+        calcuration_target: CalculationTarget { profile, path },
+        ..
+    }) = results.pop()
+    {
+        assert_eq!(path, "service1");
+        assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+}
+
+// repo layout
+// .
 // + service1/hello.txt
 #[test]
 fn init_on_basedirectory() {
