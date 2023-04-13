@@ -91,7 +91,7 @@ impl SverRepository {
                 sver_config
                     .iter()
                     .map(|(profile, config)| {
-                        config.validate(&target_path, profile, &index, &self.repo)
+                        config.validate(&target_path, profile, &index, &self.repo, &configs)
                     })
                     .collect::<Vec<ValidationResult>>()
             })

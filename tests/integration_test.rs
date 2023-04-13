@@ -999,15 +999,26 @@ fn invalid_no_default_repository() {
 
     // verify
     assert_eq!(has_invalid, true);
-    assert_eq!(results.len(), 1);
+    assert_eq!(results.len(), 2);
 
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { profile, path },
         ..
     }) = results.pop()
     {
-        assert_eq!(path, "service1");
+        assert_eq!(path, "service2");
         assert_eq!(profile, "default");
+    } else {
+        assert!(false, "this line will not be execute");
+    }
+
+    if let Some(ValidationResult::Valid {
+        calcuration_target: CalculationTarget { profile, path },
+        ..
+    }) = results.pop()
+    {
+        assert_eq!(path, "service1");
+        assert_eq!(profile, "no-default");
     } else {
         assert!(false, "this line will not be execute");
     }

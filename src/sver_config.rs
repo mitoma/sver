@@ -198,6 +198,7 @@ impl ProfileConfig {
         profile: &str,
         index: &Index,
         repo: &Repository,
+        configs: &[SverConfig],
     ) -> ValidationResult {
         let mut result = InnerValidationResult::default();
 
@@ -209,7 +210,7 @@ impl ProfileConfig {
         for entry in index.iter() {
             result
                 .invalid_dependencies
-                .retain(|dependency| Self::is_valid_dependency(dependency, &entry, repo));
+                .retain(|dependency| Self::is_valid_dependency(dependency, &entry, repo, configs));
             result
                 .invalid_excludes
                 .retain(|exclude| Self::is_valid_exclude(exclude, &entry, path));
@@ -231,9 +232,15 @@ impl ProfileConfig {
     }
 
     #[inline]
-    fn is_valid_dependency(dependency: &str, entry: &IndexEntry, repo: &Repository) -> bool {
+    fn is_valid_dependency(
+        dependency: &str,
+        entry: &IndexEntry,
+        repo: &Repository,
+        configs: &[SverConfig],
+    ) -> bool {
         let CalculationTarget { path, profile } = CalculationTarget::parse_from_setting(dependency);
-        if profile == "default" {
+        let config_file = configs.iter().find(|c| c.target_path == path);
+        if profile == "default" && config_file.is_none() {
             !match_samefile_or_include_dir(&entry.path, path.as_bytes())
         } else {
             if is_samefile(&entry.path, path.as_bytes()) {
