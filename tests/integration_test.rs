@@ -1026,10 +1026,10 @@ fn invalid_no_default_repository() {
 
 // repo layout
 // .
-// + service1/sver.toml → no default
+// + service1/README.md → no config file
 // + service2/sver.toml → dependency = [ "service1:default" ]
 #[test]
-fn invalid_ref_to_no_config_repository() {
+fn valid_ref_to_no_config_repository() {
     initialize();
 
     // setup
