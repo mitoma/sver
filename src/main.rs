@@ -26,6 +26,7 @@ fn main() -> ExitCode {
         Commands::List { path } => list(&path),
         Commands::Init { path } => init(&path),
         Commands::Validate => validate(),
+        #[cfg(target_os = "linux")]
         Commands::Inspect { command, args } => inspect(command, args),
     };
     match result {
@@ -77,6 +78,7 @@ fn validate() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn inspect(command: String, args: Vec<String>) -> Result<(), anyhow::Error> {
     std::process::Command::new(command)
         .args(args)
