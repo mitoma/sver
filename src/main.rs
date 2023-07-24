@@ -26,6 +26,7 @@ fn main() -> ExitCode {
         Commands::List { path } => list(&path),
         Commands::Init { path } => init(&path),
         Commands::Validate => validate(),
+        Commands::Inspect { command, args } => inspect(command, args),
     };
     match result {
         Ok(_) => ExitCode::SUCCESS,
@@ -73,5 +74,15 @@ fn validate() -> anyhow::Result<()> {
     if has_invalid {
         return Err(anyhow!("There are some invalid configs"));
     }
+    Ok(())
+}
+
+fn inspect(command: String, args: Vec<String>) -> Result<(), anyhow::Error> {
+    std::process::Command::new(command)
+        .args(args)
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit())
+        .spawn()
+        .map_err(|e| anyhow!("Failed to spawn command: {}", e))?;
     Ok(())
 }

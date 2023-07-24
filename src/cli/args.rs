@@ -37,6 +37,15 @@ pub(crate) enum Commands {
 
     /// validate all config files in repository
     Validate,
+
+    /// inspect
+    #[cfg(target_os = "linux")]
+    Inspect {
+        /// inspect command
+        command: String,
+        /// inspect command arguments
+        args: Vec<String>,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]
