@@ -1,6 +1,8 @@
 pub mod filemode;
 pub mod sver_config;
 pub mod sver_repository;
+#[cfg(target_os = "linux")]
+pub mod inspect;
 
 use std::{
     collections::HashMap,

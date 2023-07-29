@@ -80,11 +80,8 @@ fn validate() -> anyhow::Result<()> {
 
 #[cfg(target_os = "linux")]
 fn inspect(command: String, args: Vec<String>) -> Result<(), anyhow::Error> {
-    std::process::Command::new(command)
-        .args(args)
-        .stdout(std::process::Stdio::inherit())
-        .stderr(std::process::Stdio::inherit())
-        .spawn()
-        .map_err(|e| anyhow!("Failed to spawn command: {}", e))?;
+    sver::inspect::inspect(command, args)?
+        .iter()
+        .for_each(|s| println!("{s}"));
     Ok(())
 }
