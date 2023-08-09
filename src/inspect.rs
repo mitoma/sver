@@ -1,7 +1,9 @@
 use anyhow::anyhow;
 use inotify::WatchDescriptor;
+use log::debug;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
+use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 
 use crate::sver_repository::SverRepository;
@@ -16,12 +18,18 @@ struct NotifyAccessEvent {
     wd: WatchDescriptor,
 }
 
-pub fn inspect(command: String, args: Vec<String>) -> Result<Vec<String>, anyhow::Error> {
+pub fn inspect(
+    command: String,
+    args: Vec<String>,
+    output: Stdio,
+) -> Result<Vec<String>, anyhow::Error> {
     let repo = SverRepository::new(".")?;
 
     let subdirs = list_subdirectories_rel(repo.work_dir());
+    debug!("subdirs:{:?}", subdirs);
     let mut contain_dirs = repo.contain_directories(subdirs)?;
     contain_dirs.push(repo.work_dir().to_string());
+    debug!("contain_dirs:{:?}", contain_dirs);
 
     let mut inotify = inotify::Inotify::init()?;
     let mut wd_path_map = BTreeMap::new();
@@ -82,7 +90,7 @@ pub fn inspect(command: String, args: Vec<String>) -> Result<Vec<String>, anyhow
 
     std::process::Command::new(command)
         .args(args)
-        .stdout(std::process::Stdio::inherit())
+        .stdout(output)
         .stderr(std::process::Stdio::inherit())
         .status()
         .map_err(|e| anyhow!("Failed to spawn command: {}", e))?;
@@ -92,7 +100,10 @@ pub fn inspect(command: String, args: Vec<String>) -> Result<Vec<String>, anyhow
     receiver_handler.join().unwrap();
 
     let accessed_files = main_thread_accessed_files.lock().unwrap();
-    Ok(accessed_files.iter().map(|f| f.to_string()).collect())
+    Ok(accessed_files
+        .iter()
+        .map(|f| f.trim_start_matches(repo.work_dir()).to_owned())
+        .collect())
 }
 
 fn list_subdirectories_rel<P: AsRef<Path>>(path: P) -> Vec<String> {

@@ -27,7 +27,11 @@ fn main() -> ExitCode {
         Commands::Init { path } => init(&path),
         Commands::Validate => validate(),
         #[cfg(target_os = "linux")]
-        Commands::Inspect { command, args } => inspect(command, args),
+        Commands::Inspect {
+            command,
+            args,
+            output,
+        } => inspect(command, args, output),
     };
     match result {
         Ok(_) => ExitCode::SUCCESS,
@@ -79,8 +83,17 @@ fn validate() -> anyhow::Result<()> {
 }
 
 #[cfg(target_os = "linux")]
-fn inspect(command: String, args: Vec<String>) -> Result<(), anyhow::Error> {
-    sver::inspect::inspect(command, args)?
+fn inspect(
+    command: String,
+    args: Vec<String>,
+    output: cli::args::StdoutTarget,
+) -> Result<(), anyhow::Error> {
+    let output = match output {
+        cli::args::StdoutTarget::Stdout => std::process::Stdio::inherit(),
+        cli::args::StdoutTarget::Devnull => std::process::Stdio::null(),
+    };
+
+    sver::inspect::inspect(command, args, output)?
         .iter()
         .for_each(|s| println!("{s}"));
     Ok(())

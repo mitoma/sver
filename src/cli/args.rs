@@ -41,6 +41,9 @@ pub(crate) enum Commands {
     /// inspect
     #[cfg(target_os = "linux")]
     Inspect {
+        /// command stdout target
+        #[arg(short, long, default_value = "stdout")]
+        output: StdoutTarget,
         /// inspect command
         command: String,
         /// inspect command arguments
@@ -59,4 +62,11 @@ pub(crate) enum OutputFormat {
 pub(crate) enum VersionLength {
     Short,
     Long,
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug, Clone, ValueEnum)]
+pub(crate) enum StdoutTarget {
+    Stdout,
+    Devnull,
 }
