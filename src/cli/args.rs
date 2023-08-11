@@ -38,7 +38,7 @@ pub(crate) enum Commands {
     /// validate all config files in repository
     Validate,
 
-    /// inspect
+    /// (experimental) list files accessed by a command
     #[cfg(target_os = "linux")]
     Inspect {
         /// command stdout target
@@ -67,6 +67,8 @@ pub(crate) enum VersionLength {
 #[cfg(target_os = "linux")]
 #[derive(Debug, Clone, ValueEnum)]
 pub(crate) enum StdoutTarget {
+    /// send to parent process stdout
     Stdout,
+    /// send to /dev/null
     Devnull,
 }
