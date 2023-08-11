@@ -1254,3 +1254,121 @@ fn multiprofile_ref_singledir() {
         );
     }
 }
+
+// repo layout
+// .
+// + test1.txt
+// + src/test2.txt
+// + lib/test3.txt
+#[cfg(target_os = "linux")]
+#[test]
+fn inspect_test_1() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "src/test2.txt", "world".as_bytes());
+    add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
+    commit(&repo, "setup");
+    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
+
+    // exercise
+    let result =
+        sver::inspect::inspect("ls".to_string(), vec![], std::process::Stdio::null()).unwrap();
+
+    // verify
+    assert_eq!(result, Vec::<String>::new());
+}
+
+// repo layout
+// .
+// + test1.txt
+// + src/test2.txt
+// + lib/test3.txt
+#[cfg(target_os = "linux")]
+#[test]
+fn inspect_test_2() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "src/test2.txt", "world".as_bytes());
+    add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
+    commit(&repo, "setup");
+    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
+
+    // exercise
+    let result = sver::inspect::inspect(
+        "cat".to_string(),
+        vec!["test1.txt".to_string()],
+        std::process::Stdio::null(),
+    )
+    .unwrap();
+    // verify
+    assert_eq!(result, vec!["test1.txt"]);
+}
+
+// repo layout
+// .
+// + test1.txt
+// + src/test2.txt
+// + lib/test3.txt
+#[cfg(target_os = "linux")]
+#[test]
+fn inspect_test_3() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "src/test2.txt", "world".as_bytes());
+    add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
+    commit(&repo, "setup");
+    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
+
+    // exercise
+    let result = sver::inspect::inspect(
+        "cat".to_string(),
+        vec!["src/test2.txt".to_string(), "lib/test3.txt".to_string()],
+        std::process::Stdio::null(),
+    )
+    .unwrap();
+
+    //verify
+    assert_eq!(result, vec!["lib/test3.txt", "src/test2.txt"]);
+}
+
+// repo layout
+// .
+// + test1.txt
+// + src/test2.txt
+// + lib/test3.txt
+#[cfg(target_os = "linux")]
+#[test]
+fn inspect_test_4() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "test1.txt", "hello".as_bytes());
+    add_blob(&repo, "src/test2.txt", "world".as_bytes());
+    add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
+    commit(&repo, "setup");
+    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
+
+    // exercise
+    let result = sver::inspect::inspect(
+        "sh".to_string(),
+        vec![
+            "-c".to_string(),
+            "touch src/test4.txt && cat src/test4.txt".to_string(),
+        ],
+        std::process::Stdio::null(),
+    )
+    .unwrap();
+
+    // verify
+    assert_eq!(result, Vec::<String>::new());
+}
