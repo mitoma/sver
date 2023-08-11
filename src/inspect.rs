@@ -100,10 +100,13 @@ pub fn inspect(
     receiver_handler.join().unwrap();
 
     let accessed_files = main_thread_accessed_files.lock().unwrap();
-    Ok(accessed_files
+
+    let mut result: Vec<String> = accessed_files
         .iter()
         .map(|f| f.trim_start_matches(repo.work_dir()).to_owned())
-        .collect())
+        .collect();
+    result.sort();
+    Ok(result)
 }
 
 fn list_subdirectories_rel<P: AsRef<Path>>(path: P) -> Vec<String> {
