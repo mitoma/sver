@@ -60,7 +60,7 @@ testdata/service2/sver.toml
 ### Validate the configuration files in the repository
 
 ```sh
-sver validate
+$ sver validate
 [OK]    /sver.toml:[default]
 [OK]    testdata/cyclic1/sver.toml:[default]
 [OK]    testdata/cyclic2/sver.toml:[default]
