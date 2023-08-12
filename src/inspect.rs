@@ -1,23 +1,14 @@
 use anyhow::{anyhow, Context};
-use inotify::WatchDescriptor;
+use inotify::{Inotify, WatchDescriptor};
 use log::debug;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use std::thread::JoinHandle;
 
 use crate::sver_repository::SverRepository;
-
-enum NotifyMessage {
-    AccessEvent(NotifyAccessEvent),
-    CloseEvent,
-}
-
-struct NotifyAccessEvent {
-    path: String,
-    wd: WatchDescriptor,
-}
 
 pub fn inspect(
     command: String,
@@ -28,91 +19,11 @@ pub fn inspect(
 
     let subdirs = list_subdirectories_rel(repo.work_dir());
     debug!("subdirs:{:?}", subdirs);
-    let mut contain_dirs = repo.contain_directories(subdirs)?;
-    contain_dirs.push(repo.work_dir().to_string());
-    debug!("contain_dirs:{:?}", contain_dirs);
+    let mut git_repo_dirs = repo.contain_directories(subdirs)?;
+    git_repo_dirs.push(repo.work_dir().to_string());
+    debug!("contain_dirs:{:?}", git_repo_dirs);
 
-    let mut inotify = inotify::Inotify::init()?;
-    let mut wd_path_map = BTreeMap::new();
-
-    let mut watches = inotify.watches();
-    contain_dirs.iter().for_each(|d| {
-        let wd = watches.add(d, inotify::WatchMask::ACCESS).unwrap();
-        wd_path_map.insert(wd, d.clone());
-    });
-
-    let (sender, receiver) = std::sync::mpsc::channel::<NotifyMessage>();
-    let main_thread_sender = sender.clone();
-
-    let sender_thread_terminator = Arc::new(AtomicBool::new(false));
-
-    let accessed_files: Arc<Mutex<BTreeSet<String>>> = Arc::new(Mutex::new(BTreeSet::new()));
-    let main_thread_accessed_files = accessed_files.clone();
-
-    let sender_handler = {
-        let sender_thread_terminator = sender_thread_terminator.clone();
-        std::thread::spawn(move || {
-            let mut terminate = false;
-            loop {
-                let mut buffer = [0; 1024];
-                debug!("inotify.read_events");
-
-                match inotify.read_events(&mut buffer) {
-                    Ok(events) => {
-                        debug!("inotify.read_events");
-                        for event in events {
-                            if let Some(name) = event.name {
-                                if event.mask.contains(inotify::EventMask::ACCESS)
-                                    && !event.mask.contains(inotify::EventMask::ISDIR)
-                                {
-                                    let e = NotifyAccessEvent {
-                                        path: name.to_string_lossy().to_string(),
-                                        wd: event.wd,
-                                    };
-                                    sender.send(NotifyMessage::AccessEvent(e)).unwrap();
-                                }
-                            }
-                        }
-                    }
-                    Err(e) => {
-                        debug!("inotify.read_events error:{:?}", e);
-                        match e.kind() {
-                            std::io::ErrorKind::WouldBlock => {}
-                            _ => break,
-                        }
-                    }
-                }
-                if terminate {
-                    inotify.close().unwrap();
-                    break;
-                }
-                debug!("sender_thread_terminator:{:?}", sender_thread_terminator);
-                if sender_thread_terminator.load(std::sync::atomic::Ordering::Relaxed) {
-                    terminate = true;
-                    //break;
-                }
-            }
-        })
-    };
-
-    let receiver_handler = std::thread::spawn(move || loop {
-        match receiver.recv_timeout(std::time::Duration::from_millis(100)) {
-            Ok(event) => match event {
-                NotifyMessage::AccessEvent(e) => {
-                    let path = wd_path_map.get(&e.wd).unwrap();
-                    let path = Path::new(path).join(e.path);
-                    accessed_files
-                        .lock()
-                        .unwrap()
-                        .insert(path.to_string_lossy().to_string());
-                }
-                NotifyMessage::CloseEvent => {
-                    break;
-                }
-            },
-            Err(_err) => continue,
-        }
-    });
+    let thread = InotifyThread::new(&git_repo_dirs)?;
 
     std::process::Command::new(command)
         .args(args)
@@ -121,23 +32,7 @@ pub fn inspect(
         .status()
         .map_err(|e| anyhow!("Failed to spawn command: {}", e))?;
 
-    // send close event and wait for receiver thread to finish
-    sender_thread_terminator.store(true, std::sync::atomic::Ordering::Relaxed);
-    sender_handler
-        .join()
-        .map_err(|e| anyhow!("sender_handler join error :{:?}", e))?;
-    main_thread_sender.send(NotifyMessage::CloseEvent)?;
-    receiver_handler
-        .join()
-        .map_err(|e| anyhow!("receiver_handler join error :{:?}", e))?;
-
-    let accessed_files = main_thread_accessed_files.lock().unwrap();
-
-    let mut result: Vec<String> = accessed_files
-        .iter()
-        .map(|f| f.trim_start_matches(repo.work_dir()).to_owned())
-        .collect();
-    result.sort();
+    let result = thread.terminate(repo.work_dir());
     Ok(result)
 }
 
@@ -165,4 +60,92 @@ fn list_subdirectories<P: AsRef<Path>>(path: P) -> Vec<String> {
         }
     }
     subdirectories
+}
+
+struct InotifyThread {
+    thread: JoinHandle<BTreeSet<String>>,
+    thread_terminator: Arc<AtomicBool>,
+}
+
+impl InotifyThread {
+    fn new(dirs: &Vec<String>) -> anyhow::Result<Self> {
+        let thread_ready = Arc::new(AtomicBool::new(false));
+        let thread_terminator = Arc::new(AtomicBool::new(false));
+
+        let thread = {
+            let dirs = dirs.clone();
+            let thread_ready = thread_ready.clone();
+            let thread_terminator = thread_terminator.clone();
+            std::thread::spawn(move || {
+                let mut inotify = inotify::Inotify::init().unwrap();
+                let mut wd_path_map = BTreeMap::new();
+                let mut accessed_files = BTreeSet::new();
+
+                let mut watches = inotify.watches();
+                dirs.iter().for_each(|d| {
+                    let wd = watches.add(d, inotify::WatchMask::ACCESS).unwrap();
+                    wd_path_map.insert(wd, d.clone());
+                });
+
+                Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
+                thread_ready.store(true, std::sync::atomic::Ordering::Relaxed);
+                loop {
+                    Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
+                    if thread_terminator.load(std::sync::atomic::Ordering::Relaxed) {
+                        Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
+                        inotify.close().unwrap();
+                        break;
+                    }
+                }
+                accessed_files
+            })
+        };
+        while thread_ready.load(std::sync::atomic::Ordering::Relaxed) == false {
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        Ok(Self {
+            thread,
+            thread_terminator,
+        })
+    }
+
+    fn terminate(self, work_dir: &str) -> Vec<String> {
+        self.thread_terminator
+            .store(true, std::sync::atomic::Ordering::Relaxed);
+        let result = self.thread.join().unwrap();
+        let mut result = result
+            .iter()
+            .map(|f| f.trim_start_matches(work_dir).to_owned())
+            .collect::<Vec<String>>();
+        result.sort();
+        result
+    }
+
+    fn read_events(
+        inotify: &mut Inotify,
+        accessed_files: &mut BTreeSet<String>,
+        wd_path_map: &BTreeMap<WatchDescriptor, String>,
+    ) {
+        let mut buffer = [0; 2048];
+        match inotify.read_events(&mut buffer) {
+            Ok(events) => {
+                for event in events {
+                    if let Some(name) = event.name {
+                        if event.mask.contains(inotify::EventMask::ACCESS)
+                            && !event.mask.contains(inotify::EventMask::ISDIR)
+                        {
+                            let wd = event.wd;
+                            let path = wd_path_map.get(&wd).unwrap();
+                            let path = Path::new(path).join(name.to_string_lossy().to_string());
+                            accessed_files.insert(path.to_string_lossy().to_string());
+                        }
+                    }
+                }
+            }
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::WouldBlock => {}
+                _ => return,
+            },
+        }
+    }
 }
