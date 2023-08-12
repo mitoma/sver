@@ -68,12 +68,12 @@ struct InotifyThread {
 }
 
 impl InotifyThread {
-    fn new(dirs: &Vec<String>) -> anyhow::Result<Self> {
+    fn new(dirs: &[String]) -> anyhow::Result<Self> {
         let thread_ready = Arc::new(AtomicBool::new(false));
         let thread_terminator = Arc::new(AtomicBool::new(false));
 
         let thread = {
-            let dirs = dirs.clone();
+            let dirs = dirs.to_owned();
             let thread_ready = thread_ready.clone();
             let thread_terminator = thread_terminator.clone();
             std::thread::spawn(move || {
@@ -127,25 +127,19 @@ impl InotifyThread {
         wd_path_map: &BTreeMap<WatchDescriptor, String>,
     ) {
         let mut buffer = [0; 2048];
-        match inotify.read_events(&mut buffer) {
-            Ok(events) => {
-                for event in events {
-                    if let Some(name) = event.name {
-                        if event.mask.contains(inotify::EventMask::ACCESS)
-                            && !event.mask.contains(inotify::EventMask::ISDIR)
-                        {
-                            let wd = event.wd;
-                            let path = wd_path_map.get(&wd).unwrap();
-                            let path = Path::new(path).join(name.to_string_lossy().to_string());
-                            accessed_files.insert(path.to_string_lossy().to_string());
-                        }
+        if let Ok(events) = inotify.read_events(&mut buffer) {
+            for event in events {
+                if let Some(name) = event.name {
+                    if event.mask.contains(inotify::EventMask::ACCESS)
+                        && !event.mask.contains(inotify::EventMask::ISDIR)
+                    {
+                        let wd = event.wd;
+                        let path = wd_path_map.get(&wd).unwrap();
+                        let path = Path::new(path).join(name.to_string_lossy().to_string());
+                        accessed_files.insert(path.to_string_lossy().to_string());
                     }
                 }
             }
-            Err(e) => match e.kind() {
-                std::io::ErrorKind::WouldBlock => {}
-                _ => (),
-            },
         }
     }
 }
