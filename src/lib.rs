@@ -1,4 +1,6 @@
 pub mod filemode;
+#[cfg(target_os = "linux")]
+pub mod inspect;
 pub mod sver_config;
 pub mod sver_repository;
 

@@ -60,7 +60,7 @@ testdata/service2/sver.toml
 ### Validate the configuration files in the repository
 
 ```sh
-sver validate
+$ sver validate
 [OK]    /sver.toml:[default]
 [OK]    testdata/cyclic1/sver.toml:[default]
 [OK]    testdata/cyclic2/sver.toml:[default]
@@ -73,6 +73,27 @@ sver validate
 [OK]    testdata/lib2/sver.toml:[default]
 [OK]    testdata/service1/sver.toml:[default]
 [OK]    testdata/service2/sver.toml:[default]
+```
+
+### (Experimental) List files accessed by a command 
+
+Lists which files on the Git repository were referenced by a command when it was executed.  
+This command is experimental for Linux only.
+
+```sh
+$ sver inspect -- cargo fmt --all
+Cargo.toml
+src/cli/args.rs
+src/cli/mod.rs
+src/cli/outputs.rs
+src/filemode.rs
+src/inspect.rs
+src/lib.rs
+src/main.rs
+src/sver_config.rs
+src/sver_repository.rs
+tests/integration_test.rs
+tests/test_tool.rs
 ```
 
 ## Config

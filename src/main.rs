@@ -26,6 +26,12 @@ fn main() -> ExitCode {
         Commands::List { path } => list(&path),
         Commands::Init { path } => init(&path),
         Commands::Validate => validate(),
+        #[cfg(target_os = "linux")]
+        Commands::Inspect {
+            command,
+            args,
+            output,
+        } => inspect(command, args, output),
     };
     match result {
         Ok(_) => ExitCode::SUCCESS,
@@ -73,5 +79,22 @@ fn validate() -> anyhow::Result<()> {
     if has_invalid {
         return Err(anyhow!("There are some invalid configs"));
     }
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn inspect(
+    command: String,
+    args: Vec<String>,
+    output: cli::args::StdoutTarget,
+) -> Result<(), anyhow::Error> {
+    let output = match output {
+        cli::args::StdoutTarget::Stdout => std::process::Stdio::inherit(),
+        cli::args::StdoutTarget::Devnull => std::process::Stdio::null(),
+    };
+
+    sver::inspect::inspect(".", command, args, output)?
+        .iter()
+        .for_each(|s| println!("{s}"));
     Ok(())
 }

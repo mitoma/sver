@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     path::{Component, Path, PathBuf},
 };
 
@@ -13,7 +13,7 @@ use crate::{
     filemode::FileMode,
     find_repository, relative_path,
     sver_config::{CalculationTarget, ProfileConfig, SverConfig, ValidationResult},
-    OidAndMode, Version, SEPARATOR_STR,
+    OidAndMode, Version, SEPARATOR_BYTE, SEPARATOR_STR,
 };
 
 pub struct SverRepository {
@@ -48,6 +48,43 @@ impl SverRepository {
             work_dir,
             calculation_target,
         })
+    }
+
+    pub fn work_dir(&self) -> &str {
+        &self.work_dir
+    }
+
+    pub fn contain_directories(&self, dirs: Vec<String>) -> anyhow::Result<Vec<String>> {
+        let prefix = self.repo.workdir().with_context(|| "get workdir")?;
+        let mut temp_dirs = BTreeSet::<String>::new();
+        temp_dirs.extend(dirs);
+        let mut result = BTreeSet::<String>::new();
+        self.repo.index()?.iter().for_each(|entry| {
+            if entry.path.starts_with(".git".as_bytes()) {
+                debug!(
+                    "git path:{:?}",
+                    String::from_utf8_lossy(entry.path.as_ref())
+                );
+            }
+            if temp_dirs.is_empty() {
+                return;
+            }
+            let mut removed_dirs = BTreeSet::<String>::new();
+            for dir in &temp_dirs {
+                if entry
+                    .path
+                    .starts_with([dir.as_bytes(), SEPARATOR_BYTE].concat().as_slice())
+                {
+                    let path = Path::new(prefix).join(Path::new(dir));
+                    result.insert(path.to_string_lossy().into());
+                    removed_dirs.insert(dir.to_string());
+                }
+            }
+            removed_dirs.iter().for_each(|d| {
+                temp_dirs.remove(d);
+            });
+        });
+        Ok(result.into_iter().collect())
     }
 
     pub fn init_sver_config(&self) -> anyhow::Result<String> {
