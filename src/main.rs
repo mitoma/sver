@@ -93,7 +93,7 @@ fn inspect(
         cli::args::StdoutTarget::Devnull => std::process::Stdio::null(),
     };
 
-    sver::inspect::inspect(command, args, output)?
+    sver::inspect::inspect(".", command, args, output)?
         .iter()
         .for_each(|s| println!("{s}"));
     Ok(())

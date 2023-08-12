@@ -1271,11 +1271,15 @@ fn inspect_test_1() {
     add_blob(&repo, "src/test2.txt", "world".as_bytes());
     add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
     commit(&repo, "setup");
-    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
 
     // exercise
-    let result =
-        sver::inspect::inspect("ls".to_string(), vec![], std::process::Stdio::null()).unwrap();
+    let result = sver::inspect::inspect(
+        &repo.workdir().unwrap().to_string_lossy(),
+        "ls".to_string(),
+        vec![],
+        std::process::Stdio::null(),
+    )
+    .unwrap();
 
     // verify
     assert_eq!(result, Vec::<String>::new());
@@ -1297,10 +1301,10 @@ fn inspect_test_2() {
     add_blob(&repo, "src/test2.txt", "world".as_bytes());
     add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
     commit(&repo, "setup");
-    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
 
     // exercise
     let result = sver::inspect::inspect(
+        &repo.workdir().unwrap().to_string_lossy(),
         "cat".to_string(),
         vec!["test1.txt".to_string()],
         std::process::Stdio::null(),
@@ -1326,10 +1330,10 @@ fn inspect_test_3() {
     add_blob(&repo, "src/test2.txt", "world".as_bytes());
     add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
     commit(&repo, "setup");
-    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
 
     // exercise
     let result = sver::inspect::inspect(
+        &repo.workdir().unwrap().to_string_lossy(),
         "cat".to_string(),
         vec!["src/test2.txt".to_string(), "lib/test3.txt".to_string()],
         std::process::Stdio::null(),
@@ -1356,10 +1360,10 @@ fn inspect_test_4() {
     add_blob(&repo, "src/test2.txt", "world".as_bytes());
     add_blob(&repo, "lib/test3.txt", "morning".as_bytes());
     commit(&repo, "setup");
-    std::env::set_current_dir(repo.workdir().unwrap()).unwrap();
 
     // exercise
     let result = sver::inspect::inspect(
+        &repo.workdir().unwrap().to_string_lossy(),
         "sh".to_string(),
         vec![
             "-c".to_string(),

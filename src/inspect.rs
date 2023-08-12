@@ -4,18 +4,20 @@ use log::debug;
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 use std::process::Stdio;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use std::thread::JoinHandle;
+use std::thread::{sleep, JoinHandle};
+use std::time::Duration;
 
 use crate::sver_repository::SverRepository;
 
 pub fn inspect(
+    path: &str,
     command: String,
     args: Vec<String>,
     output: Stdio,
 ) -> Result<Vec<String>, anyhow::Error> {
-    let repo = SverRepository::new(".").context("repository not found")?;
+    let repo = SverRepository::new(path).context("repository not found")?;
 
     let subdirs = list_subdirectories_rel(repo.work_dir());
     debug!("subdirs:{:?}", subdirs);
@@ -27,6 +29,7 @@ pub fn inspect(
 
     std::process::Command::new(command)
         .args(args)
+        .current_dir(path)
         .stdout(output)
         .stderr(std::process::Stdio::inherit())
         .status()
@@ -86,13 +89,12 @@ impl InotifyThread {
                     let wd = watches.add(d, inotify::WatchMask::ACCESS).unwrap();
                     wd_path_map.insert(wd, d.clone());
                 });
+                thread_ready.store(true, Ordering::Relaxed);
 
-                Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
-                thread_ready.store(true, std::sync::atomic::Ordering::Relaxed);
                 loop {
+                    sleep(Duration::from_millis(1));
                     Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
-                    if thread_terminator.load(std::sync::atomic::Ordering::Relaxed) {
-                        Self::read_events(&mut inotify, &mut accessed_files, &wd_path_map);
+                    if thread_terminator.load(Ordering::Relaxed) {
                         inotify.close().unwrap();
                         break;
                     }
@@ -100,8 +102,8 @@ impl InotifyThread {
                 accessed_files
             })
         };
-        while !thread_ready.load(std::sync::atomic::Ordering::Relaxed) {
-            std::thread::sleep(std::time::Duration::from_millis(10));
+        while !thread_ready.load(Ordering::Relaxed) {
+            sleep(Duration::from_millis(1));
         }
         Ok(Self {
             thread,
@@ -110,8 +112,7 @@ impl InotifyThread {
     }
 
     fn terminate(self, work_dir: &str) -> Vec<String> {
-        self.thread_terminator
-            .store(true, std::sync::atomic::Ordering::Relaxed);
+        self.thread_terminator.store(true, Ordering::Relaxed);
         let result = self.thread.join().unwrap();
         let mut result = result
             .iter()
