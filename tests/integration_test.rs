@@ -543,7 +543,7 @@ fn valid_dependencies_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, false);
+    assert!(!has_invalid);
     assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -588,7 +588,7 @@ fn invalid_dependencies_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, true);
+    assert!(has_invalid);
     assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
@@ -637,7 +637,7 @@ fn valid_excludes_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, false);
+    assert!(!has_invalid);
     assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -682,7 +682,7 @@ fn invalid_excludes_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, true);
+    assert!(has_invalid);
     assert_eq!(results.len(), 1);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
@@ -732,7 +732,7 @@ fn valid_has_profile_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, false);
+    assert!(!has_invalid);
     assert_eq!(results.len(), 2);
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -787,7 +787,7 @@ fn invalid_has_profile_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, true);
+    assert!(has_invalid);
     assert_eq!(results.len(), 2);
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
@@ -853,7 +853,7 @@ fn valid_no_target_profile_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, false);
+    assert!(!has_invalid);
     debug!("{:?}", results);
     assert_eq!(results.len(), 4);
     if let Some(ValidationResult::Valid {
@@ -921,7 +921,7 @@ fn invalid_no_target_profile_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, true);
+    assert!(has_invalid);
     debug!("{:?}", results);
     assert_eq!(results.len(), 5);
     if let Some(ValidationResult::Invalid {
@@ -998,7 +998,7 @@ fn invalid_no_default_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, true);
+    assert!(has_invalid);
     assert_eq!(results.len(), 2);
 
     if let Some(ValidationResult::Invalid {
@@ -1056,7 +1056,7 @@ fn valid_ref_to_no_config_repository() {
     } = sver_repo.validate_sver_config().unwrap();
 
     // verify
-    assert_eq!(has_invalid, false);
+    assert!(!has_invalid);
     assert_eq!(results.len(), 1);
 
     if let Some(ValidationResult::Valid {

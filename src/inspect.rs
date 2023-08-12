@@ -100,7 +100,7 @@ impl InotifyThread {
                 accessed_files
             })
         };
-        while thread_ready.load(std::sync::atomic::Ordering::Relaxed) == false {
+        while !thread_ready.load(std::sync::atomic::Ordering::Relaxed) {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         Ok(Self {
@@ -144,7 +144,7 @@ impl InotifyThread {
             }
             Err(e) => match e.kind() {
                 std::io::ErrorKind::WouldBlock => {}
-                _ => return,
+                _ => (),
             },
         }
     }
