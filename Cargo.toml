@@ -23,7 +23,7 @@ toml = "0.7.6"
 inotify = "0.10.2"
 
 [dev-dependencies]
-chrono = "0.4.26"
+chrono = "0.4.29"
 
 [dev-dependencies.uuid]
 features = [
