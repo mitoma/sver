@@ -5,6 +5,7 @@
   ],
   "packageRules": [
     {
+      "groupName": "git2",
       "matchCategories": [
         "rust"
       ],
