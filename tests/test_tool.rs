@@ -19,7 +19,7 @@ pub fn initialize() {
 // テスト用リポジトリを作る
 pub fn setup_test_repository() -> Repository {
     let mut tmp_dir = temp_dir();
-    let uuid = Uuid::new_v4();
+    let uuid = Uuid::now_v7();
     tmp_dir.push(format!("sver-{uuid}"));
 
     let repository_path = tmp_dir.as_path();

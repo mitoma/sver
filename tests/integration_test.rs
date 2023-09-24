@@ -222,7 +222,7 @@ fn has_submodule() {
 
     // setup
     let mut tmp_dir = temp_dir();
-    let uuid = Uuid::new_v4();
+    let uuid = Uuid::now_v7();
     tmp_dir.push(format!("sver-{}", uuid));
     create_dir(tmp_dir.clone()).unwrap();
 
@@ -1326,4 +1326,181 @@ fn inspect_test() {
         // verify
         assert_eq!(result, Vec::<String>::new());
     }
+}
+
+// repo layout
+// .
+// + service1/hello.txt
+// + service1/unknown.txt
+// + service2/sver.toml → dependency = [ "service1/hello.txt" ]
+#[test]
+fn export_repository() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "service1/hello.txt", "hello world!".as_bytes());
+    add_blob(&repo, "service1/unknown.txt", "good bye!".as_bytes());
+    add_blob(
+        &repo,
+        "service2/sver.toml",
+        "
+        [default]
+        dependencies = [
+            \"service1/hello.txt\",
+        ]"
+        .as_bytes(),
+    );
+    commit(&repo, "setup");
+
+    // exercise
+    let export_dir = sver::export::create_export_dir(None).unwrap();
+    let result = sver::export::export(
+        repo.workdir()
+            .unwrap()
+            .to_path_buf()
+            .join("service2")
+            .to_str()
+            .unwrap(),
+        export_dir.clone(),
+    );
+
+    // verify
+    assert!(result.is_ok());
+    assert!(export_dir.as_path().join("service1/hello.txt").exists());
+    assert!(!export_dir.as_path().join("service1/unknown.txt").exists());
+    assert!(export_dir.as_path().join("service2/sver.toml").exists());
+}
+
+// repo layout
+// .
+// + linkdir
+//   + symlink → original/README.txt
+// + original
+//   + README.txt
+#[test]
+fn export_has_symlink_single() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_symlink(&repo, "linkdir/symlink", "../original/README.txt");
+    commit(&repo, "setup");
+
+    // exercise
+    let export_dir = sver::export::create_export_dir(None).unwrap();
+    let result = sver::export::export(
+        repo.workdir()
+            .unwrap()
+            .to_path_buf()
+            .join("linkdir")
+            .to_str()
+            .unwrap(),
+        export_dir.clone(),
+    );
+
+    // verify
+    assert!(result.is_ok());
+    assert!(export_dir.as_path().join("linkdir/symlink").exists());
+    assert!(export_dir.as_path().join("original/README.txt").exists());
+}
+
+// repo layout
+// .
+// + linkdir
+//   + symlink → original/README.txt
+// + original
+//   + README.txt
+//   + Sample.txt
+#[test]
+fn export_has_symlink_dir() {
+    initialize();
+
+    // setup
+    let repo = setup_test_repository();
+    add_blob(&repo, "original/README.txt", "hello.world".as_bytes());
+    add_blob(&repo, "original/Sample.txt", "sample".as_bytes());
+
+    add_symlink(&repo, "linkdir/symlink", "../original");
+    commit(&repo, "setup");
+
+    // exercise
+    let export_dir = sver::export::create_export_dir(None).unwrap();
+    let result = sver::export::export(
+        repo.workdir()
+            .unwrap()
+            .to_path_buf()
+            .join("linkdir")
+            .to_str()
+            .unwrap(),
+        export_dir.clone(),
+    );
+
+    // verify
+    debug!("{:?}", export_dir);
+    assert!(result.is_ok());
+    assert!(export_dir.as_path().join("linkdir/symlink").exists());
+    assert!(export_dir.as_path().join("original/README.txt").exists());
+    assert!(export_dir.as_path().join("original/Sample.txt").exists());
+}
+
+// repo layout
+// .
+// + sub → submodule ../sub e40a885afd013606e105c027a5c31910137e5566
+#[test]
+fn export_has_submodule() {
+    initialize();
+
+    // setup
+    let mut tmp_dir = temp_dir();
+    let uuid = Uuid::now_v7();
+    tmp_dir.push(format!("sver-{}", uuid));
+    create_dir(tmp_dir.clone()).unwrap();
+
+    // setup external repo
+    let mut sub_repo_dir = tmp_dir.clone();
+    sub_repo_dir.push("sub");
+
+    let sub_repo = Repository::init(sub_repo_dir).unwrap();
+    add_blob(&sub_repo, "hello.txt", "hello".as_bytes());
+    commit_at(
+        &sub_repo,
+        "setup",
+        Utc.with_ymd_and_hms(2022, 10, 1, 10, 20, 30)
+            .earliest()
+            .unwrap(),
+    );
+
+    // setup sut repo
+    let mut sut_repo_dir = tmp_dir.clone();
+    sut_repo_dir.push("sut");
+
+    let mut repo = Repository::init(sut_repo_dir).unwrap();
+    add_submodule(
+        &mut repo,
+        "../sub",
+        "sub",
+        "e40a885afd013606e105c027a5c31910137e5566",
+    );
+    commit(&repo, "setup");
+
+    // exercise
+    let export_dir = sver::export::create_export_dir(None).unwrap();
+    let result = sver::export::export(
+        repo.workdir()
+            .unwrap()
+            .to_path_buf()
+            .join(".")
+            .to_str()
+            .unwrap(),
+        export_dir.clone(),
+    );
+
+    // verify
+    debug!("{:?}", export_dir);
+    assert!(result.is_ok());
+    assert!(export_dir.as_path().join("sub").exists());
+    assert!(export_dir.as_path().join("sub").is_dir());
+    assert!(export_dir.as_path().join("sub").join(".git").exists());
 }
