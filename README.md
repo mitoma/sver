@@ -75,6 +75,22 @@ $ sver validate
 [OK]    testdata/service2/sver.toml:[default]
 ```
 
+### Export dependency files
+
+```sh
+$ sver list src:prof1
+src/sver.toml
+src/test1.txt
+
+$ sver export src:prof1
+export-dir: /tmp/sver-export-018ae55f-59a7-76e5-b836-619928cd0c8
+$ tree /tmp/sver-export-018ae55f-59a7-76e5-b836-619928cd0c8
+/tmp/sver-export-018ae55f-59a7-76e5-b836-619928cd0c8
+└── src
+    ├── sver.toml
+    └── test1.txt
+```
+
 ### (Experimental) List files accessed by a command 
 
 Lists which files on the Git repository were referenced by a command when it was executed.  
