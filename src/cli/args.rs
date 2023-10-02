@@ -49,6 +49,16 @@ pub(crate) enum Commands {
         /// inspect command arguments
         args: Vec<String>,
     },
+
+    /// export package dependencies
+    Export {
+        /// target path
+        #[arg(default_value = ".")]
+        path: String,
+
+        /// export directory
+        export_dir: Option<String>,
+    },
 }
 
 #[derive(Debug, Clone, ValueEnum)]

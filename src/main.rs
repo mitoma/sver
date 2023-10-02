@@ -32,6 +32,7 @@ fn main() -> ExitCode {
             args,
             output,
         } => inspect(command, args, output),
+        Commands::Export { path, export_dir } => export(&path, export_dir),
     };
     match result {
         Ok(_) => ExitCode::SUCCESS,
@@ -97,4 +98,10 @@ fn inspect(
         .iter()
         .for_each(|s| println!("{s}"));
     Ok(())
+}
+
+fn export(path: &str, export_dir: Option<String>) -> Result<(), anyhow::Error> {
+    let export_dir = sver::export::create_export_dir(export_dir)?;
+    println!("export-dir: {}", export_dir.display());
+    sver::export::export(path, export_dir)
 }
