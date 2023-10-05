@@ -99,7 +99,6 @@ jobs:
               if [[ "${{ matrix.job.os }}" == linux ]]; then
                 sudo apt-get update
                 sudo apt-get install gcc-aarch64-linux-gnu
-                export RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc"
               fi
             fi
             # debug build for cache optimization
