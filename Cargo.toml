@@ -22,7 +22,7 @@ walkdir = "2.4.0"
 
 [dependencies.uuid]
 features = ["v7", "fast-rng", "macro-diagnostics"]
-version = "1.4.1"
+version = "1.5.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 inotify = "0.10.2"
