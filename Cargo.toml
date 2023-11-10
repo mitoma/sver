@@ -8,7 +8,7 @@ version = "0.1.18"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.7", features = ["derive"] }
-env_logger = "0.10.0"
+env_logger = "0.10.1"
 git2 = "0.18.1"
 libgit2-sys = { version = "0.16.1", features = ["vendored-openssl"] }
 log = "0.4.20"
