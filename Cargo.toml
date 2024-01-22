@@ -28,4 +28,4 @@ version = "1.7.0"
 inotify = "0.10.2"
 
 [dev-dependencies]
-chrono = "0.4.31"
+chrono = "0.4.32"
