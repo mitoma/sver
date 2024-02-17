@@ -28,13 +28,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mitoma/sver-actions/setup@v1
+      - uses: mitoma/sver-actions/setup@v2
         with:
           os: ${{ matrix.job.os }}
 
       # ci phase
       - name: check all
-        uses: mitoma/sver-actions/exec@v1
+        uses: mitoma/sver-actions/exec@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           phase: check-${{ matrix.job.target }}
@@ -83,13 +83,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mitoma/sver-actions/setup@v1
+      - uses: mitoma/sver-actions/setup@v2
         with:
           os: ${{ matrix.job.os }}
 
       # artifact phase
       - name: build artifact
-        uses: mitoma/sver-actions/exec@v1
+        uses: mitoma/sver-actions/exec@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           phase: artifact-${{ matrix.job.target }}
@@ -134,7 +134,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mitoma/sver-actions/setup@v1
+      - uses: mitoma/sver-actions/setup@v2
 
       - id: extract_tag
         name: Extract tag name
