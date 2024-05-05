@@ -19,7 +19,7 @@ jobs:
           - target: x86_64-pc-windows-gnu
             os: windows
             runs-on: windows-latest
-          - target: x86_64-apple-darwin
+          - target: aarch64-apple-darwin
             os: macos
             runs-on: macos-latest
 
@@ -94,12 +94,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           phase: artifact-${{ matrix.job.target }}
           command: |
-            if [[ "${{ matrix.job.target }}" == aarch64-* ]]; then
-              rustup target add "${{ matrix.job.target }}"
-              if [[ "${{ matrix.job.os }}" == linux ]]; then
-                sudo apt-get update
-                sudo apt-get install gcc-aarch64-linux-gnu
-              fi
+            rustup target add "${{ matrix.job.target }}"
+            if [[ "${{ matrix.job.os }}" == linux && "${{ matrix.job.target }}" == aarch64-* ]]; then
+              sudo apt-get install gcc-aarch64-linux-gnu
             fi
             # debug build for cache optimization
             cargo build --target=${{ matrix.job.target }}
