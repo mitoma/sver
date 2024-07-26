@@ -15,14 +15,6 @@ struct VersionsOutput {
     pub(crate) versions: Vec<VersionOutput>,
 }
 
-#[derive(Serialize)]
-struct VersionFullOutput {
-    repository_root: String,
-    path: String,
-    short_version: String,
-    long_version: String,
-}
-
 pub(crate) fn format_versions(
     versions: &[Version],
     output_format: OutputFormat,
