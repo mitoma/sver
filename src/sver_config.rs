@@ -4,12 +4,12 @@ use std::{
     fs::File,
     io::Write,
     path::{Path, PathBuf},
+    sync::LazyLock,
 };
 
 use anyhow::Context;
 use git2::{Index, IndexEntry, Repository};
 use log::debug;
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,8 @@ pub struct CalculationTarget {
     pub profile: String,
 }
 
-static TARGET_FORMAT: Lazy<Regex> = Lazy::new(|| Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap());
+static TARGET_FORMAT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("(.+):([a-zA-Z0-9-_]+)").unwrap());
 
 impl CalculationTarget {
     pub fn new(path: String, profile: String) -> Self {
