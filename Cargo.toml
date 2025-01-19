@@ -9,8 +9,8 @@ version = "0.1.20"
 anyhow = "1.0.82"
 clap = { version = "4.5.4", features = ["derive"] }
 env_logger = "0.11.3"
-git2 = "0.19.0"
-libgit2-sys = { version = "0.17.0", features = ["vendored-openssl"] }
+git2 = "0.20.0"
+libgit2-sys = { version = "0.18.0", features = ["vendored-openssl"] }
 log = "0.4.21"
 regex = "1.10.4"
 serde = { version = "1.0.200", features = ["derive"] }
