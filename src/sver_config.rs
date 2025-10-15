@@ -74,7 +74,7 @@ impl SverConfig {
         self.profiles.insert(profile.to_owned(), config)
     }
 
-    pub(crate) fn iter(&self) -> Iter<String, ProfileConfig> {
+    pub(crate) fn iter(&self) -> Iter<'_, String, ProfileConfig> {
         self.profiles.iter()
     }
 
