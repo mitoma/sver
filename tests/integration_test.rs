@@ -552,7 +552,7 @@ fn valid_dependencies_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -601,7 +601,7 @@ fn invalid_dependencies_repository() {
         assert_eq!(invalid_dependencies, vec!["service1/hello-hello.txt"]);
         assert!(invalid_excludes.is_empty());
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -646,7 +646,7 @@ fn valid_excludes_repository() {
         assert_eq!(path, "service1");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -695,7 +695,7 @@ fn invalid_excludes_repository() {
         assert!(invalid_dependencies.is_empty());
         assert_eq!(invalid_excludes, vec!["hello-hello.txt"]);
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -741,7 +741,7 @@ fn valid_has_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof1");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -750,7 +750,7 @@ fn valid_has_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -799,7 +799,7 @@ fn invalid_has_profile_repository() {
         assert_eq!(profile, "prof1");
         assert_eq!(invalid_dependencies, vec!["service1/helloo.txt"]);
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -808,7 +808,7 @@ fn invalid_has_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -863,7 +863,7 @@ fn valid_no_target_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "prof2");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -872,7 +872,7 @@ fn valid_no_target_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -934,7 +934,7 @@ fn invalid_no_target_profile_repository() {
         assert_eq!(profile, "prof3");
         assert_eq!(invalid_dependencies, vec!["service1/:prof999"]);
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
     if let Some(ValidationResult::Invalid {
         calcuration_target: CalculationTarget { path, profile },
@@ -946,7 +946,7 @@ fn invalid_no_target_profile_repository() {
         assert_eq!(profile, "prof2");
         assert_eq!(invalid_dependencies, vec!["service1:prof999"]);
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
     if let Some(ValidationResult::Valid {
         calcuration_target: CalculationTarget { path, profile },
@@ -955,7 +955,7 @@ fn invalid_no_target_profile_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -1009,7 +1009,7 @@ fn invalid_no_default_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 
     if let Some(ValidationResult::Valid {
@@ -1020,7 +1020,7 @@ fn invalid_no_default_repository() {
         assert_eq!(path, "service1");
         assert_eq!(profile, "no-default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
@@ -1067,7 +1067,7 @@ fn valid_ref_to_no_config_repository() {
         assert_eq!(path, "service2");
         assert_eq!(profile, "default");
     } else {
-        assert!(false, "this line will not be execute");
+        unreachable!("this line will not be execute");
     }
 }
 
