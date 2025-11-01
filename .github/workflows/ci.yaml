@@ -96,7 +96,7 @@ jobs:
           command: |
             rustup target add "${{ matrix.job.target }}"
             if [[ "${{ matrix.job.os }}" == linux && "${{ matrix.job.target }}" == aarch64-* ]]; then
-              sudo apt-get install gcc-aarch64-linux-gnu
+              sudo apt-get update && sudo apt-get install gcc-aarch64-linux-gnu
             fi
             # debug build for cache optimization
             cargo build --target=${{ matrix.job.target }}
