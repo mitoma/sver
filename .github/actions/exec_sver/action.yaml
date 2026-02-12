@@ -68,7 +68,7 @@ runs:
 
     - name: restore cache
       if: ${{ steps.ci_result.outputs.exit_code != '0' && inputs.cache_key != '' && inputs.cache_path != '' }}
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         key: "${{ inputs.cache_key }}"
         path: "${{ inputs.cache_path }}"
