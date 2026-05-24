@@ -1,9 +1,48 @@
 use anyhow::anyhow;
 use git2::build::RepoBuilder;
 use log::debug;
-use std::{env::temp_dir, path::PathBuf};
+use std::{
+    env::temp_dir,
+    path::{Path, PathBuf},
+};
 
 use crate::sver_repository::SverRepository;
+
+fn collect_paths_recursive(root: &Path) -> anyhow::Result<Vec<PathBuf>> {
+    let mut result = Vec::new();
+    let mut stack = vec![root.to_path_buf()];
+
+    while let Some(dir) = stack.pop() {
+        for entry in std::fs::read_dir(&dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            let file_type = entry.file_type()?;
+
+            result.push(path.clone());
+            if file_type.is_dir() {
+                stack.push(path);
+            }
+        }
+    }
+
+    result.sort();
+    Ok(result)
+}
+
+fn should_keep_path(path: &Path, source_paths: &[PathBuf]) -> bool {
+    source_paths.iter().any(|s| {
+        if s.is_dir() && path.starts_with(s) {
+            // source がディレクトリなら、その配下はすべて残す。
+            return true;
+        }
+        // source 自体、または source に到達する親ディレクトリは残す。
+        s.starts_with(path)
+    })
+}
+
+fn depth(path: &Path) -> usize {
+    path.components().count()
+}
 
 pub fn create_export_dir(export_dir: Option<String>) -> anyhow::Result<PathBuf> {
     let export_dir = if let Some(export_dir) = export_dir {
@@ -47,32 +86,28 @@ pub fn export(path: &str, export_dir: PathBuf) -> Result<(), anyhow::Error> {
     }
 
     // Remove all files and directories except for those in sources from exported_dir and below
-    let walker = walkdir::WalkDir::new(&export_dir);
-    walker
-        .sort_by(|a, b| a.path().cmp(b.path()))
+    let source_paths: Vec<PathBuf> = sources.iter().map(|s| export_dir.join(s)).collect();
+    let mut remove_targets: Vec<PathBuf> = collect_paths_recursive(&export_dir)?
         .into_iter()
-        .filter_map(|e| e.ok())
-        .filter(|e| e.path() != export_dir)
-        .filter(|e| {
-            !sources.iter().map(|s| export_dir.join(s)).any(|s| {
-                if s.is_dir() && e.path().starts_with(&s) {
-                    // If the dependent file is a directory (≒ in the case of git submodule), all directories under it are left.
-                    return true;
-                }
-                s.starts_with(e.path())
-            })
-        })
-        .for_each(|e| {
-            if !e.path().exists() {
-                // noop
-            } else if e.path().is_dir() {
-                debug!("remove dir[{}]", e.path().display());
-                std::fs::remove_dir_all(e.path()).unwrap()
-            } else {
-                debug!("remove file[{}]", e.path().display());
-                std::fs::remove_file(e.path()).unwrap();
-            }
-        });
+        .filter(|p| p != &export_dir)
+        .filter(|p| !should_keep_path(p, &source_paths))
+        .collect();
+
+    // 深い階層から削除すると、親ディレクトリ削除後の race を避けやすい。
+    remove_targets.sort_by(|a, b| depth(b).cmp(&depth(a)).then_with(|| a.cmp(b)));
+
+    for path in remove_targets {
+        if !path.exists() {
+            continue;
+        }
+        if path.is_dir() {
+            debug!("remove dir[{}]", path.display());
+            std::fs::remove_dir_all(&path)?;
+        } else {
+            debug!("remove file[{}]", path.display());
+            std::fs::remove_file(&path)?;
+        }
+    }
 
     Ok(())
 }
